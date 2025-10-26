@@ -132,7 +132,7 @@ function SettingsPage() {
 
       {/* Global Message */}
       {message.text && (
-        <div className={`p-4 rounded flex items-center gap-3 border-l-4 ${
+        <div className={`p-4 rounded@@ flex items-center gap-3 border-l-4 ${
           message.type === 'error' 
             ? 'bg-red-50 text-red-800 border-red-400' 
             : 'bg-green-50 text-green-800 border-green-400'

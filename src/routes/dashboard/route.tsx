@@ -13,16 +13,15 @@ import {
   BarChart3,
   Wrench,
   Users,
-  Menu,
+  
   ChevronLeft,
   ChevronRight,
   Mail,
   AlertCircle,
-  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover'
+// Use simple buttons for mobile sub-navigation to avoid deformation
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog'
 import { auth } from '../../config/firebase'
 import { signOut, sendEmailVerification, type User as FirebaseUser } from 'firebase/auth'
 import { db } from '../../config/firebase'
@@ -48,7 +47,7 @@ function DashboardLayout() {
   }
 
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [signOutOpen, setSignOutOpen] = useState(false)
   const [user, setUser] = useState<FirebaseUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -337,42 +336,9 @@ function DashboardLayout() {
 
   const currentSection = getCurrentSection()
 
-  const handleSectionBack = () => {
-    const basePaths = {
-      Metrics: '/dashboard',
-      Utilities: '/dashboard/utilities',
-      Wallet: '/dashboard/wallet',
-      Settings: '/dashboard/settings',
-      Admin: '/dashboard/admin'
-    }
-    navigate({ to: basePaths[currentSection as keyof typeof basePaths] || '/dashboard' })
-  }
+  // Mobile header now shows a compact nested nav for the active section (no title/back button)
 
-  // Tab change handlers
-  const handleMetricsTabChange = (value: string) => {
-    navigate({ to: value === 'water' ? '/dashboard/water' : '/dashboard' })
-  }
-
-  const handleUtilitiesTabChange = (value: string) => {
-    navigate({ to: value === 'water' ? '/dashboard/utilities/water' : '/dashboard/utilities' })
-  }
-
-  const handleWalletTabChange = (value: string) => {
-    const paths = {
-      balance: '/dashboard/wallet',
-      history: '/dashboard/wallet/history',
-      auto: '/dashboard/wallet/auto'
-    }
-    navigate({ to: paths[value as keyof typeof paths] })
-  }
-
-  const handleSettingsTabChange = () => {
-    navigate({ to:  '/dashboard/settings' })
-  }
-
-  const handleAdminTabChange = (value: string) => {
-    navigate({ to: value === 'users' ? '/dashboard/admin/users' : '/dashboard/admin' })
-  }
+  // Note: mobile submenu is handled via the compact popover instead of per-section handlers.
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -469,84 +435,93 @@ function DashboardLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden md:p-4">
-        {/* Mobile Top Heading */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSectionBack}
-            className="h-8 w-8 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-semibold text-gray-900">{currentSection}</h1>
-          <div className="w-8" /> {/* Spacer */}
-        </div>
-
-        {/* Mobile Sub-Tabs (for Metrics/Utilities/Wallet/Settings with subs) */}
-        <div className="md:hidden bg-white border-b border-gray-200">
-          {currentSection === 'Metrics' && (
-            <Tabs 
-              value={path === '/dashboard/water' ? 'water' : 'electricity'} 
-              onValueChange={handleMetricsTabChange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="electricity">Electricity</TabsTrigger>
-                <TabsTrigger value="water">Water</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {currentSection === 'Utilities' && (
-            <Tabs 
-              value={path === '/dashboard/utilities/water' ? 'water' : 'electricity'} 
-              onValueChange={handleUtilitiesTabChange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="electricity">Electricity</TabsTrigger>
-                <TabsTrigger value="water">Water</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {currentSection === 'Wallet' && (
-            <Tabs 
-              value={path.includes('history') ? 'history' : path.includes('auto') ? 'auto' : 'balance'} 
-              onValueChange={handleWalletTabChange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="balance">Balance</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-                <TabsTrigger value="auto">Auto</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {currentSection === 'Settings' && (
-            <Tabs 
-              value={path.includes('account') ? 'account' : 'profile'} 
-              onValueChange={handleSettingsTabChange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-                <TabsTrigger value="account">Account</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {currentSection === 'Admin' && (
-            <Tabs 
-              value={path.includes('users') ? 'users' : 'metrics'} 
-              onValueChange={handleAdminTabChange}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="metrics">Metrics</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-        </div>
+        {/* Mobile: inline compact nested nav (no title/back icon). Hidden on Settings to avoid duplicate top menu */}
+        {currentSection !== 'Settings' && (
+          <div className="md:hidden bg-white border-b border-gray-200">
+            <div className="flex items-center justify-center gap-2 px-2 py-2 overflow-x-auto">
+            {currentSection === 'Metrics' && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path === '/dashboard' ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Electricity
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/water' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path === '/dashboard/water' ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Water
+                </Button>
+              </>
+            )}
+            {currentSection === 'Utilities' && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/utilities' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path === '/dashboard/utilities' ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Electricity
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/utilities/water' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path === '/dashboard/utilities/water' ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Water
+                </Button>
+              </>
+            )}
+            {currentSection === 'Wallet' && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/wallet' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path === '/dashboard/wallet' ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Balance
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/wallet/history' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path.includes('history') ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  History
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/wallet/auto' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path.includes('auto') ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Auto
+                </Button>
+              </>
+            )}
+            {/* Settings top nested nav is intentionally omitted on mobile to avoid duplicate controls */}
+            {currentSection === 'Admin' && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/admin' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${!path.includes('users') ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Metrics
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => (navigate as any)({ to: '/dashboard/admin/users' })}
+                  className={`shrink-0 text-sm px-3 rounded-md border transition-colors ${path.includes('users') ? 'text-blue-600 border-blue-600' : 'text-gray-700 border-transparent hover:border-gray-200'}`}
+                >
+                  Users
+                </Button>
+              </>
+            )}
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 overflow-auto p-2 pb-36 md:pb-0 md:p-0">
           <Outlet />
@@ -558,71 +533,48 @@ function DashboardLayout() {
       <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 shadow-lg">
         <div className="flex items-center justify-around px-2 py-2">
           {/* Metrics */}
-          <Link to="/dashboard" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isMetricsActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
-            <BarChart3 className={`h-6 w-6 ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <span className={`text-xs font-medium ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`}>Metrics</span>
+          <Link to="/dashboard" className={`flex flex-col items-center space-y-1 p-3 transition-colors ${isMetricsActive ? 'text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:rounded-md'}`}>
+            <BarChart3 strokeWidth={1.5} className={`h-7 w-7 ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-light ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`}>Metrics</span>
           </Link>
 
           {/* Utilities */}
-          <Link to="/dashboard/utilities" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isUtilitiesActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
-            <Wrench className={`h-6 w-6 ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <span className={`text-xs font-medium ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`}>Utilities</span>
+          <Link to="/dashboard/utilities" className={`flex flex-col items-center space-y-1 p-3 transition-colors ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:rounded-md'}`}>
+            <Wrench strokeWidth={1.5} className={`h-7 w-7 ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-light ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`}>Utilities</span>
           </Link>
 
           {/* Wallet */}
-          <Link to="/dashboard/wallet" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isWalletActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
-            <Wallet className={`h-6 w-6 ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <span className={`text-xs font-medium ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`}>Wallet</span>
+          <Link to="/dashboard/wallet" className={`flex flex-col items-center space-y-1 p-3 transition-colors ${isWalletActive ? 'text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:rounded-md'}`}>
+            <Wallet strokeWidth={1.5} className={`h-7 w-7 ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-light ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`}>Wallet</span>
           </Link>
 
           {/* Settings */}
-          <Link to="/dashboard/settings" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isSettingsActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
-            <Settings className={`h-6 w-6 ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <span className={`text-xs font-medium ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`}>Settings</span>
+          <Link to="/dashboard/settings" className={`flex flex-col items-center space-y-1 p-3 transition-colors ${isSettingsActive ? 'text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:rounded-md'}`}>
+            <Settings strokeWidth={1.5} className={`h-7 w-7 ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-light ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`}>Settings</span>
           </Link>
 
-          {/* More Menu (always present after Settings) */}
+          {/* Sign Out (mobile) - opens confirm dialog */}
           <div className="flex flex-col items-center space-y-1 p-2">
-            <Popover open={moreOpen} onOpenChange={setMoreOpen}>
-              <PopoverTrigger asChild>
-                <button className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors hover:bg-gray-50 ${moreOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-600'}`}>
-                  <Menu className="h-6 w-6" />
-                  <span className={`text-xs font-medium ${moreOpen ? 'text-blue-600' : 'text-gray-600'}`}>More</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" side="top" className="w-56 p-2 mt-2">
-                <div className="space-y-1">
-                  {/* Admin (if applicable) */}
-                  {isAdmin && (
-                    <>
-                      <Link
-                        to="/dashboard/admin"
-                        className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        <span className="text-sm">Admin Metrics</span>
-                      </Link>
-                      <Link
-                        to="/dashboard/admin/users"
-                        className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                      >
-                        <Users className="h-4 w-4" />
-                        <span className="text-sm">User Management</span>
-                      </Link>
-                    </>
-                  )}
-                  <div className="border-t pt-2">
-                    <button
-                      onClick={() => { setMoreOpen(false); handleLogout(); }}
-                      className="w-full text-left p-2 rounded-md hover:bg-gray-50 flex items-center gap-2 text-sm text-red-600"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <button onClick={() => setSignOutOpen(true)} className={`flex flex-col items-center space-y-1 p-3 transition-colors hover:bg-gray-50 hover:rounded-md text-gray-600`}>
+              <LogOut strokeWidth={1.5} className="h-7 w-7" />
+              <span className={`text-xs font-light text-gray-600`}>Sign Out</span>
+            </button>
+
+            <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm Sign Out</DialogTitle>
+                </DialogHeader>
+                <DialogDescription>Are you sure you want to sign out? You will be returned to the home page.</DialogDescription>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setSignOutOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={() => { setSignOutOpen(false); handleLogout(); }}>Sign Out</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>

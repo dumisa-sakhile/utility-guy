@@ -435,10 +435,10 @@ function RouteComponent() {
                     <img
                       src={user.photoURL}
                       alt="Profile"
-                      className="w-10 h-10 rounded-2xl object-cover border-2 border-gray-200"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
                       {displayInitials}
                     </div>
                   )}

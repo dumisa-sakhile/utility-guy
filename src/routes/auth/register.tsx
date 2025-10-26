@@ -268,7 +268,7 @@ function RegisterPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[80vh] flex items-center justify-center py-12">
       <div className="w-full max-w-md p-6 bg-card/60 backdrop-blur-sm rounded-lg border border-white/10">
         <h2 className="text-2xl font-semibold mb-4">Create an account</h2>
 

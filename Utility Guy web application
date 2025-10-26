@@ -1,0 +1,218 @@
+import os
+import json
+import logging
+from typing import List, Optional
+from dataclasses import Field 
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from pydantic import conint
+from deepseeker import DeepSeeker
+from dotenv import load_dotenv
+# Load environment variables
+load_dotenv()
+deepseeker_api_key = os.getenv("DEEPSEEKER_API_KEY")
+if not deepseeker_api_key:
+    raise RuntimeError("DEEPSEEKER_API_KEY not found in environment variables")
+
+app = FastAPI(title="Utility Guy", version="1.0.0")
+deepseeker_api_key = os.getenv("DEEPSEEKER_API_KEY")
+deepseeker = DeepSeeker(api_key=deepseeker_api_key)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class SearchRequest(BaseModel):
+    query: str
+    num_results: Optional[int] = 5
+    filters: Optional[dict] = None
+    num_results: conint(gt=1, le=20) = 5 # pyright: ignore[reportInvalidTypeForm]
+
+class SearchResult(BaseModel):
+    title: str
+    url: str
+    snippet: str
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+
+##Purchase Request Model
+
+class PurchaseItem(BaseModel)
+    type: str
+    id: str
+    name: str
+    price: float
+    quantity: int = Field(gt=0)
+
+class PurchaseRequest(BaseModel):
+    user_id: Optional[str] = None
+    items: List[PurchaseItem]
+    payment_method: str
+    shipping_address: Optional[str] = None
+
+class PurchaseResponse(BaseModel):
+    confirmation_id: str
+    total_cost: float
+    message: str
+
+@app.post("/search", response_model=SearchResponse)
+async def search(request: SearchRequest):
+    try:
+        search_results = deepseeker.search(
+            query=request.query,
+            num_results=request.num_results,
+            filters=request.filters
+        )
+        
+        results = [
+            SearchResult(
+                title=result['title'],
+                url=result['url'],
+                snippet=result['snippet']
+            ) for result in search_results
+        ]
+        
+        return SearchResponse(results=results)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.post("/purchase", response_model=PurchaseResponse)
+async def purchase(request: PurchaseRequest):
+    try:
+        total_cost = sum(item.price * item.quantity for item in request.items)
+        confirmation_id = deepseeker.process_purchase(
+            user_id=request.user_id,
+            items=[item.dict() for item in request.items],
+            payment_method=request.payment_method,
+            shipping_address=request.shipping_address
+        )
+        
+        return PurchaseResponse(
+            confirmation_id=confirmation_id,
+            total_cost=total_cost,
+            message="Purchase completed successfully"
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    ##back end code
+
+app = FastAPI(title="Utility Guy", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+deepseeker = None
+if DeepSeeker is not None and DEEPSEEKER_API_KEY:
+    try:
+        deepseeker = DeepSeeker(api_key=DEEPSEEKER_API_KEY)
+    except Exception as e:
+        logger.warning("DeepSeeker client init failed: %s", str(e)  )
+
+    ## Start up code
+
+@app.on_event("startup")
+def startup_event():
+        SQLModel.metadata.create_all(engine)
+        logger.info("Database tables created")
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+# Search endpoint
+
+@app.post("/search", response_model=SearchResponse)
+async def search(request: SearchRequest):
+    if deepseeker is None:
+        raise HTTPException(status_code=503, detail="Search service unavailable")
+    try:
+        raw_results = await run_in_threadpool(
+            deepseeker.search,
+            query=request.query,
+            num_results=request.num_results,
+            filters=request.filters
+        )
+        results = []
+        for r in raw_results:
+            results.append(SearchResult(
+                title=r.get('Title', 'No title'),
+                url=r.get('URL', ''),
+                snippet=r.get('Snippet', '')
+            ))
+        return SearchResponse(results=results)
+    except Exception as e:
+        logger.error("Search error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Search failed")
+    
+    # Purchase endpoint
+
+@app.post("/purchase", response_model=PurchaseResponse)
+async def create_purchase(request: PurchaseRequest, session: get_session):
+    try:
+        total_cost = sum(item.price * item.quantity for item in request.items)
+        confirmation_id = await run_in_threadpool(
+            deepseeker.process_purchase,
+            user_id=request.user_id,
+            items=[item.dict() for item in request.items],
+            payment_method=request.payment_method,
+            shipping_address=request.shipping_address
+        )
+        return PurchaseResponse(
+            confirmation_id=confirmation_id,
+            total_cost=total_cost,
+            message="Purchase completed successfully"
+        )
+    except Exception as e:
+        logger.exeption("Purchase error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Purchase failed")
+    
+@app.get("/purchases", response_model=List[PurchaseResponse])
+def list_purchases(user_id: Optional[str] = None, session: get_session = Depends(get_session)):
+    try:
+        query = select(Purchase)
+        if user_id:
+            query = query.where(Purchase.user_id == user_id)
+        purchases = session.exec(query).all()
+        
+        results = [
+            PurchaseResponse(
+                confirmation_id=p.confirmation_id,
+                total_cost=p.total_cost,
+                message="Purchase retrieved successfully"
+            ) for p in purchases]
+        return results
+    except Exception as e:
+        logger.exception("List purchases error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve purchases")
+        
+##Health check
+
+@app.get("/health")
+def health_check():
+    try:
+        # Simple check to see if DeepSeeker client is initialized
+        if deepseeker is None:
+            raise Exception("DeepSeeker client not initialized")
+        
+        # Optionally, perform a lightweight operation to verify connectivity
+        test_search = deepseeker.search(query="health check", num_results=1)
+        
+        return {"status": "ok", "message": "Service is healthy"}
+        
+
+    
+    

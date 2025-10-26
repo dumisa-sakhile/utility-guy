@@ -24,6 +24,7 @@ import { Route as DashboardAdminRouteRouteImport } from './routes/dashboard/admi
 import { Route as DashboardWalletIndexRouteImport } from './routes/dashboard/wallet/index'
 import { Route as DashboardUtilitiesIndexRouteImport } from './routes/dashboard/utilities/index'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
+import { Route as DashboardChatbotIndexRouteImport } from './routes/dashboard/chatbot/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 import { Route as DashboardWalletHistoryRouteImport } from './routes/dashboard/wallet/history'
 import { Route as DashboardWalletAutoRouteImport } from './routes/dashboard/wallet/auto'
@@ -105,6 +106,11 @@ const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardSettingsRouteRoute,
 } as any)
+const DashboardChatbotIndexRoute = DashboardChatbotIndexRouteImport.update({
+  id: '/chatbot/',
+  path: '/chatbot/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
+  '/dashboard/chatbot': typeof DashboardChatbotIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/utilities/': typeof DashboardUtilitiesIndexRoute
   '/dashboard/wallet/': typeof DashboardWalletIndexRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
   '/dashboard/admin': typeof DashboardAdminIndexRoute
+  '/dashboard/chatbot': typeof DashboardChatbotIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/utilities': typeof DashboardUtilitiesIndexRoute
   '/dashboard/wallet': typeof DashboardWalletIndexRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
+  '/dashboard/chatbot/': typeof DashboardChatbotIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/utilities/': typeof DashboardUtilitiesIndexRoute
   '/dashboard/wallet/': typeof DashboardWalletIndexRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
     | '/dashboard/admin/'
+    | '/dashboard/chatbot'
     | '/dashboard/settings/'
     | '/dashboard/utilities/'
     | '/dashboard/wallet/'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
     | '/dashboard/admin'
+    | '/dashboard/chatbot'
     | '/dashboard/settings'
     | '/dashboard/utilities'
     | '/dashboard/wallet'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
     | '/dashboard/admin/'
+    | '/dashboard/chatbot/'
     | '/dashboard/settings/'
     | '/dashboard/utilities/'
     | '/dashboard/wallet/'
@@ -367,6 +379,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/settings/'
       preLoaderRoute: typeof DashboardSettingsIndexRouteImport
       parentRoute: typeof DashboardSettingsRouteRoute
+    }
+    '/dashboard/chatbot/': {
+      id: '/dashboard/chatbot/'
+      path: '/chatbot'
+      fullPath: '/dashboard/chatbot'
+      preLoaderRoute: typeof DashboardChatbotIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
     }
     '/dashboard/admin/': {
       id: '/dashboard/admin/'
@@ -487,6 +506,7 @@ interface DashboardRouteRouteChildren {
   DashboardWalletRouteRoute: typeof DashboardWalletRouteRouteWithChildren
   DashboardWaterRoute: typeof DashboardWaterRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardChatbotIndexRoute: typeof DashboardChatbotIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
@@ -496,6 +516,7 @@ const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardWalletRouteRoute: DashboardWalletRouteRouteWithChildren,
   DashboardWaterRoute: DashboardWaterRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardChatbotIndexRoute: DashboardChatbotIndexRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

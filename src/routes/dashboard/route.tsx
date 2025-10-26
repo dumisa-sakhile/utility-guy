@@ -265,6 +265,19 @@ function DashboardLayout() {
       ]
     },
     {
+      name: 'Tools',
+      icon: Zap,
+      items: [
+        {
+          name: 'Chatbot',
+          href: '/dashboard/chatbot',
+          icon: Zap,
+          active: path.startsWith('/dashboard/chatbot'),
+          description: 'AI assistant'
+        }
+      ]
+    },
+    {
       name: 'Settings',
       icon: Settings,
       items: [

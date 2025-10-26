@@ -511,17 +511,17 @@ function RouteComponent() {
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div 
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm" 
+            className="absolute inset-0 bg-black/20" 
             onClick={() => setIsMobileOpen(false)} 
             aria-hidden 
           />
           
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl border-t border-gray-200 max-h-[85vh] overflow-hidden">
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl border-t border-gray-200 max-h-[85vh] overflow-hidden divide-y divide-gray-100">
             <div className="flex justify-center p-3">
               <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
             </div>
 
-            <div className="px-6 py-4 border-b border-gray-100">
+            <div className="px-6 py-4">
               <div className="flex items-center gap-3">
                 {user?.photoURL ? (
                   <img
@@ -535,8 +535,8 @@ function RouteComponent() {
                     </div>
                 )}
                   <div className="flex-1 min-w-0">
-                    <p title={displayName} className="text-lg font-semibold text-gray-900 truncate">{displayName}</p>
-                    <p title={user?.email || ''} className="text-sm text-gray-500 truncate">{user?.email || ''}</p>
+                    <p title={displayName} className="text-lg font-light text-gray-900 truncate">{displayName}</p>
+                    <p title={user?.email || ''} className="text-sm font-light text-gray-500 truncate">{user?.email || ''}</p>
                   </div>
               </div>
             </div>
@@ -551,11 +551,11 @@ function RouteComponent() {
                     className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
                       item.active 
                         ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                        : 'border-gray-100 text-gray-700 hover:bg-gray-50 hover:border-gray-200'
+                        : 'border-gray-100 text-gray-600 hover:bg-gray-50 hover:border-gray-200'
                     }`}
                   >
-                    <item.icon className="h-6 w-6 mb-2" />
-                    <span className="text-xs font-medium text-center">{item.name}</span>
+                    <item.icon className="h-6 w-6 mb-2" strokeWidth={1} />
+                    <span className="text-xs font-light text-center">{item.name}</span>
                   </Link>
                 ))}
 
@@ -566,29 +566,29 @@ function RouteComponent() {
                     onClick={() => setIsMobileOpen(false)}
                     className="flex flex-col items-center p-4 rounded-xl border-2 border-purple-100 text-purple-700 hover:bg-purple-50 hover:border-purple-200 transition-all"
                   >
-                    <item.icon className="h-6 w-6 mb-2" />
-                    <span className="text-xs font-medium text-center">{item.name}</span>
+                    <item.icon className="h-6 w-6 mb-2" strokeWidth={1} />
+                    <span className="text-xs font-light text-center">{item.name}</span>
                   </Link>
                 ))}
               </div>
             </div>
 
-            <div className="px-4 pb-4 border-t border-gray-100 pt-4">
+            <div className="px-4 pb-4 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <Link
                   to="/"
                   className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                 >
-                  <Home className="h-4 w-4" />
-                  <span className="text-sm font-medium">Home</span>
+                  <Home className="h-4 w-4" strokeWidth={1} />
+                  <span className="text-sm font-light">Home</span>
                 </Link>
                 <Button 
                   onClick={handleLogout} 
                   variant="outline" 
                   className="flex items-center justify-center gap-2 p-3 h-auto text-red-600 hover:text-red-700 hover:border-red-200"
                 >
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sign Out</span>
+                  <LogOut className="h-4 w-4" strokeWidth={1} />
+                  <span className="text-sm font-light">Sign Out</span>
                 </Button>
               </div>
             </div>
@@ -598,15 +598,15 @@ function RouteComponent() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header */}
-        <header className="md:hidden bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4 shrink-0 sticky top-0 z-40">
+        {/* Mobile Header - only hamburger, no shadow */}
+        <header className="md:hidden  p-3 shrink-0 sticky top-0 z-40">
           <div className="flex items-center">
             <button
               onClick={() => setIsMobileOpen(true)}
-              className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+              className="p-2 rounded-md bg-white text-gray-600"
               aria-label="Open menu"
             >
-              <Menu className="h-5 w-5 text-gray-600" />
+              <Menu className="h-5 w-5" />
             </button>
           </div>
         </header>

@@ -25,7 +25,7 @@ export const Route = createRootRoute({
     }, [navigate])
 
     return (
-      <div className="roboto-condensed-light md:inter-light">
+      <div className="font-responsive">
         <Outlet />
       </div>
     )

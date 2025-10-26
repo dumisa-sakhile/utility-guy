@@ -127,7 +127,7 @@ function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-8 px-4 sm:px-6 lg:px-0">
+    <div className="max-w-4xl space-y-8 px-4 sm:px-6 lg:px-0 pt-6">
     
 
       {/* Global Message */}

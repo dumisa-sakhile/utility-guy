@@ -119,6 +119,8 @@
     @apply border-border outline-ring/50;
   }
   body {
+    /* Use CSS variable for responsive font-family (set further below) */
+    font-family: var(--app-font, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial);
     @apply bg-background text-foreground;
   }
 }
@@ -259,4 +261,26 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(54, 94, 183); /* scrollbar thumb hover color */
+}
+
+/* Responsive root font helper: Roboto Condensed on small screens, Inter on md+ */
+.font-responsive {
+  font-family: "Roboto Condensed", sans-serif;
+}
+
+@media (min-width: 768px) {
+  .font-responsive {
+    font-family: "Inter", sans-serif;
+  }
+}
+
+/* Global responsive font variable: Roboto Condensed on small screens, Inter on md+ */
+:root {
+  --app-font: "Roboto Condensed", sans-serif;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --app-font: "Inter", sans-serif;
+  }
 }

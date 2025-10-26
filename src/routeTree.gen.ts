@@ -12,12 +12,24 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
-import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
-import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
+import { Route as DashboardWaterRouteImport } from './routes/dashboard/water'
 import { Route as AuthResetRouteImport } from './routes/auth/reset'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as DashboardWalletRouteRouteImport } from './routes/dashboard/wallet/route'
+import { Route as DashboardUtilitiesRouteRouteImport } from './routes/dashboard/utilities/route'
+import { Route as DashboardSettingsRouteRouteImport } from './routes/dashboard/settings/route'
+import { Route as DashboardAdminRouteRouteImport } from './routes/dashboard/admin/route'
+import { Route as DashboardWalletIndexRouteImport } from './routes/dashboard/wallet/index'
+import { Route as DashboardUtilitiesIndexRouteImport } from './routes/dashboard/utilities/index'
+import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
+import { Route as DashboardWalletHistoryRouteImport } from './routes/dashboard/wallet/history'
+import { Route as DashboardWalletAutoRouteImport } from './routes/dashboard/wallet/auto'
+import { Route as DashboardUtilitiesWaterRouteImport } from './routes/dashboard/utilities/water'
+import { Route as DashboardSettingsAccountRouteImport } from './routes/dashboard/settings/account'
+import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
 
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
@@ -34,19 +46,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => DashboardRouteRoute,
-} as any)
-const DashboardProfileRoute = DashboardProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const DashboardWaterRoute = DashboardWaterRouteImport.update({
+  id: '/water',
+  path: '/water',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
 const AuthResetRoute = AuthResetRouteImport.update({
@@ -59,44 +71,136 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthRouteRoute,
 } as any)
-const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
+const DashboardWalletRouteRoute = DashboardWalletRouteRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
   getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardUtilitiesRouteRoute = DashboardUtilitiesRouteRouteImport.update({
+  id: '/utilities',
+  path: '/utilities',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardSettingsRouteRoute = DashboardSettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardAdminRouteRoute = DashboardAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardWalletIndexRoute = DashboardWalletIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardWalletRouteRoute,
+} as any)
+const DashboardUtilitiesIndexRoute = DashboardUtilitiesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardUtilitiesRouteRoute,
+} as any)
+const DashboardSettingsIndexRoute = DashboardSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardSettingsRouteRoute,
+} as any)
+const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardAdminRouteRoute,
+} as any)
+const DashboardWalletHistoryRoute = DashboardWalletHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => DashboardWalletRouteRoute,
+} as any)
+const DashboardWalletAutoRoute = DashboardWalletAutoRouteImport.update({
+  id: '/auto',
+  path: '/auto',
+  getParentRoute: () => DashboardWalletRouteRoute,
+} as any)
+const DashboardUtilitiesWaterRoute = DashboardUtilitiesWaterRouteImport.update({
+  id: '/water',
+  path: '/water',
+  getParentRoute: () => DashboardUtilitiesRouteRoute,
+} as any)
+const DashboardSettingsAccountRoute =
+  DashboardSettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => DashboardSettingsRouteRoute,
+  } as any)
+const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => DashboardAdminRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/dashboard/admin': typeof DashboardAdminRouteRouteWithChildren
+  '/dashboard/settings': typeof DashboardSettingsRouteRouteWithChildren
+  '/dashboard/utilities': typeof DashboardUtilitiesRouteRouteWithChildren
+  '/dashboard/wallet': typeof DashboardWalletRouteRouteWithChildren
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset': typeof AuthResetRoute
-  '/dashboard/profile': typeof DashboardProfileRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/water': typeof DashboardWaterRoute
   '/auth/': typeof AuthIndexRoute
-  '/dashboard/admin': typeof DashboardAdminIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
+  '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
+  '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
+  '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
+  '/dashboard/admin/': typeof DashboardAdminIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
+  '/dashboard/utilities/': typeof DashboardUtilitiesIndexRoute
+  '/dashboard/wallet/': typeof DashboardWalletIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset': typeof AuthResetRoute
-  '/dashboard/profile': typeof DashboardProfileRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/water': typeof DashboardWaterRoute
   '/auth': typeof AuthIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
+  '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
+  '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
+  '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
   '/dashboard/admin': typeof DashboardAdminIndexRoute
+  '/dashboard/settings': typeof DashboardSettingsIndexRoute
+  '/dashboard/utilities': typeof DashboardUtilitiesIndexRoute
+  '/dashboard/wallet': typeof DashboardWalletIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/dashboard/admin': typeof DashboardAdminRouteRouteWithChildren
+  '/dashboard/settings': typeof DashboardSettingsRouteRouteWithChildren
+  '/dashboard/utilities': typeof DashboardUtilitiesRouteRouteWithChildren
+  '/dashboard/wallet': typeof DashboardWalletRouteRouteWithChildren
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset': typeof AuthResetRoute
-  '/dashboard/profile': typeof DashboardProfileRoute
-  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/water': typeof DashboardWaterRoute
   '/auth/': typeof AuthIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
+  '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
+  '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
+  '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
+  '/dashboard/settings/': typeof DashboardSettingsIndexRoute
+  '/dashboard/utilities/': typeof DashboardUtilitiesIndexRoute
+  '/dashboard/wallet/': typeof DashboardWalletIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -104,33 +208,64 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/dashboard/admin'
+    | '/dashboard/settings'
+    | '/dashboard/utilities'
+    | '/dashboard/wallet'
     | '/auth/register'
     | '/auth/reset'
-    | '/dashboard/profile'
-    | '/dashboard/settings'
+    | '/dashboard/water'
     | '/auth/'
-    | '/dashboard/admin'
+    | '/dashboard/'
+    | '/dashboard/admin/users'
+    | '/dashboard/settings/account'
+    | '/dashboard/utilities/water'
+    | '/dashboard/wallet/auto'
+    | '/dashboard/wallet/history'
+    | '/dashboard/admin/'
+    | '/dashboard/settings/'
+    | '/dashboard/utilities/'
+    | '/dashboard/wallet/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/dashboard'
     | '/auth/register'
     | '/auth/reset'
-    | '/dashboard/profile'
-    | '/dashboard/settings'
+    | '/dashboard/water'
     | '/auth'
+    | '/dashboard'
+    | '/dashboard/admin/users'
+    | '/dashboard/settings/account'
+    | '/dashboard/utilities/water'
+    | '/dashboard/wallet/auto'
+    | '/dashboard/wallet/history'
     | '/dashboard/admin'
+    | '/dashboard/settings'
+    | '/dashboard/utilities'
+    | '/dashboard/wallet'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/dashboard/admin'
+    | '/dashboard/settings'
+    | '/dashboard/utilities'
+    | '/dashboard/wallet'
     | '/auth/register'
     | '/auth/reset'
-    | '/dashboard/profile'
-    | '/dashboard/settings'
+    | '/dashboard/water'
     | '/auth/'
+    | '/dashboard/'
+    | '/dashboard/admin/users'
+    | '/dashboard/settings/account'
+    | '/dashboard/utilities/water'
+    | '/dashboard/wallet/auto'
+    | '/dashboard/wallet/history'
     | '/dashboard/admin/'
+    | '/dashboard/settings/'
+    | '/dashboard/utilities/'
+    | '/dashboard/wallet/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/auth/': {
       id: '/auth/'
       path: '/'
@@ -169,18 +311,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/dashboard/settings': {
-      id: '/dashboard/settings'
-      path: '/settings'
-      fullPath: '/dashboard/settings'
-      preLoaderRoute: typeof DashboardSettingsRouteImport
-      parentRoute: typeof DashboardRouteRoute
-    }
-    '/dashboard/profile': {
-      id: '/dashboard/profile'
-      path: '/profile'
-      fullPath: '/dashboard/profile'
-      preLoaderRoute: typeof DashboardProfileRouteImport
+    '/dashboard/water': {
+      id: '/dashboard/water'
+      path: '/water'
+      fullPath: '/dashboard/water'
+      preLoaderRoute: typeof DashboardWaterRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
     '/auth/reset': {
@@ -197,12 +332,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/dashboard/admin/': {
-      id: '/dashboard/admin/'
+    '/dashboard/wallet': {
+      id: '/dashboard/wallet'
+      path: '/wallet'
+      fullPath: '/dashboard/wallet'
+      preLoaderRoute: typeof DashboardWalletRouteRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/utilities': {
+      id: '/dashboard/utilities'
+      path: '/utilities'
+      fullPath: '/dashboard/utilities'
+      preLoaderRoute: typeof DashboardUtilitiesRouteRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/admin': {
+      id: '/dashboard/admin'
       path: '/admin'
       fullPath: '/dashboard/admin'
-      preLoaderRoute: typeof DashboardAdminIndexRouteImport
+      preLoaderRoute: typeof DashboardAdminRouteRouteImport
       parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/wallet/': {
+      id: '/dashboard/wallet/'
+      path: '/'
+      fullPath: '/dashboard/wallet/'
+      preLoaderRoute: typeof DashboardWalletIndexRouteImport
+      parentRoute: typeof DashboardWalletRouteRoute
+    }
+    '/dashboard/utilities/': {
+      id: '/dashboard/utilities/'
+      path: '/'
+      fullPath: '/dashboard/utilities/'
+      preLoaderRoute: typeof DashboardUtilitiesIndexRouteImport
+      parentRoute: typeof DashboardUtilitiesRouteRoute
+    }
+    '/dashboard/settings/': {
+      id: '/dashboard/settings/'
+      path: '/'
+      fullPath: '/dashboard/settings/'
+      preLoaderRoute: typeof DashboardSettingsIndexRouteImport
+      parentRoute: typeof DashboardSettingsRouteRoute
+    }
+    '/dashboard/admin/': {
+      id: '/dashboard/admin/'
+      path: '/'
+      fullPath: '/dashboard/admin/'
+      preLoaderRoute: typeof DashboardAdminIndexRouteImport
+      parentRoute: typeof DashboardAdminRouteRoute
+    }
+    '/dashboard/wallet/history': {
+      id: '/dashboard/wallet/history'
+      path: '/history'
+      fullPath: '/dashboard/wallet/history'
+      preLoaderRoute: typeof DashboardWalletHistoryRouteImport
+      parentRoute: typeof DashboardWalletRouteRoute
+    }
+    '/dashboard/wallet/auto': {
+      id: '/dashboard/wallet/auto'
+      path: '/auto'
+      fullPath: '/dashboard/wallet/auto'
+      preLoaderRoute: typeof DashboardWalletAutoRouteImport
+      parentRoute: typeof DashboardWalletRouteRoute
+    }
+    '/dashboard/utilities/water': {
+      id: '/dashboard/utilities/water'
+      path: '/water'
+      fullPath: '/dashboard/utilities/water'
+      preLoaderRoute: typeof DashboardUtilitiesWaterRouteImport
+      parentRoute: typeof DashboardUtilitiesRouteRoute
+    }
+    '/dashboard/settings/account': {
+      id: '/dashboard/settings/account'
+      path: '/account'
+      fullPath: '/dashboard/settings/account'
+      preLoaderRoute: typeof DashboardSettingsAccountRouteImport
+      parentRoute: typeof DashboardSettingsRouteRoute
+    }
+    '/dashboard/admin/users': {
+      id: '/dashboard/admin/users'
+      path: '/users'
+      fullPath: '/dashboard/admin/users'
+      preLoaderRoute: typeof DashboardAdminUsersRouteImport
+      parentRoute: typeof DashboardAdminRouteRoute
     }
   }
 }
@@ -223,16 +442,82 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
   AuthRouteRouteChildren,
 )
 
-interface DashboardRouteRouteChildren {
-  DashboardProfileRoute: typeof DashboardProfileRoute
-  DashboardSettingsRoute: typeof DashboardSettingsRoute
+interface DashboardAdminRouteRouteChildren {
+  DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
 }
 
-const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
-  DashboardProfileRoute: DashboardProfileRoute,
-  DashboardSettingsRoute: DashboardSettingsRoute,
+const DashboardAdminRouteRouteChildren: DashboardAdminRouteRouteChildren = {
+  DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
+}
+
+const DashboardAdminRouteRouteWithChildren =
+  DashboardAdminRouteRoute._addFileChildren(DashboardAdminRouteRouteChildren)
+
+interface DashboardSettingsRouteRouteChildren {
+  DashboardSettingsAccountRoute: typeof DashboardSettingsAccountRoute
+  DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
+}
+
+const DashboardSettingsRouteRouteChildren: DashboardSettingsRouteRouteChildren =
+  {
+    DashboardSettingsAccountRoute: DashboardSettingsAccountRoute,
+    DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
+  }
+
+const DashboardSettingsRouteRouteWithChildren =
+  DashboardSettingsRouteRoute._addFileChildren(
+    DashboardSettingsRouteRouteChildren,
+  )
+
+interface DashboardUtilitiesRouteRouteChildren {
+  DashboardUtilitiesWaterRoute: typeof DashboardUtilitiesWaterRoute
+  DashboardUtilitiesIndexRoute: typeof DashboardUtilitiesIndexRoute
+}
+
+const DashboardUtilitiesRouteRouteChildren: DashboardUtilitiesRouteRouteChildren =
+  {
+    DashboardUtilitiesWaterRoute: DashboardUtilitiesWaterRoute,
+    DashboardUtilitiesIndexRoute: DashboardUtilitiesIndexRoute,
+  }
+
+const DashboardUtilitiesRouteRouteWithChildren =
+  DashboardUtilitiesRouteRoute._addFileChildren(
+    DashboardUtilitiesRouteRouteChildren,
+  )
+
+interface DashboardWalletRouteRouteChildren {
+  DashboardWalletAutoRoute: typeof DashboardWalletAutoRoute
+  DashboardWalletHistoryRoute: typeof DashboardWalletHistoryRoute
+  DashboardWalletIndexRoute: typeof DashboardWalletIndexRoute
+}
+
+const DashboardWalletRouteRouteChildren: DashboardWalletRouteRouteChildren = {
+  DashboardWalletAutoRoute: DashboardWalletAutoRoute,
+  DashboardWalletHistoryRoute: DashboardWalletHistoryRoute,
+  DashboardWalletIndexRoute: DashboardWalletIndexRoute,
+}
+
+const DashboardWalletRouteRouteWithChildren =
+  DashboardWalletRouteRoute._addFileChildren(DashboardWalletRouteRouteChildren)
+
+interface DashboardRouteRouteChildren {
+  DashboardAdminRouteRoute: typeof DashboardAdminRouteRouteWithChildren
+  DashboardSettingsRouteRoute: typeof DashboardSettingsRouteRouteWithChildren
+  DashboardUtilitiesRouteRoute: typeof DashboardUtilitiesRouteRouteWithChildren
+  DashboardWalletRouteRoute: typeof DashboardWalletRouteRouteWithChildren
+  DashboardWaterRoute: typeof DashboardWaterRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardAdminRouteRoute: DashboardAdminRouteRouteWithChildren,
+  DashboardSettingsRouteRoute: DashboardSettingsRouteRouteWithChildren,
+  DashboardUtilitiesRouteRoute: DashboardUtilitiesRouteRouteWithChildren,
+  DashboardWalletRouteRoute: DashboardWalletRouteRouteWithChildren,
+  DashboardWaterRoute: DashboardWaterRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute, Outlet, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Outlet, Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { 
   LogOut, 
   Zap, 
@@ -9,41 +9,39 @@ import {
   Wallet, 
   Settings, 
   Shield, 
-  Battery, 
   User,
-  LayoutDashboard,
+  BarChart3,
+  Wrench,
+  Users,
   Menu,
   ChevronLeft,
   ChevronRight,
   Mail,
-  CheckCircle,
   AlertCircle,
-  Home,
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover'
-import { Avatar, AvatarFallback } from '../../components/ui/avatar'
 import { auth } from '../../config/firebase'
 import { signOut, sendEmailVerification, type User as FirebaseUser } from 'firebase/auth'
 import { db } from '../../config/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import logo from '../../logo.svg'
 
-
 export const Route = createFileRoute('/dashboard')({
-  component: RouteComponent,
+  component: DashboardLayout,
 })
 
-
-function RouteComponent() {
+function DashboardLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const path = location.pathname
+
   interface Profile {
     name?: string
     surname?: string
     isActive?: boolean
     isAdmin?: boolean
     role?: string
-    // allow additional fields from Firestore without errors
     [key: string]: any
   }
 
@@ -53,45 +51,7 @@ function RouteComponent() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [sendingVerification, setSendingVerification] = useState(false)
-  // NOTE: portal tooltip removed — compact sidebar items use the native title attribute instead
 
-  const supportTeam = [
-    {
-      full: 'Sakhile Dumisa',
-      url: 'https://github.com/dumisa-sakhile',
-      // primary/secondary used to generate a small SVG background image
-      primary: '#22c55e',
-      secondary: '#16a34a',
-      icon: Shield,
-      iconColor: 'text-green-600'
-    },
-    {
-      full: 'Khayalethu Dube',
-      url: 'https://github.com/Khaya-ux',
-      primary: '#3b82f6',
-      secondary: '#1e40af',
-      icon: Battery,
-      iconColor: 'text-blue-600'
-    },
-    {
-      full: 'Njabulo Matshika',
-      url: 'https://github.com/DrStormXXX',
-      primary: '#f59e0b',
-      secondary: '#d97706',
-      icon: CheckCircle,
-      iconColor: 'text-amber-600'
-    },
-  ]
-
-  function makeBgDataUrl(primary: string, secondary: string) {
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>` +
-      `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${primary}'/><stop offset='1' stop-color='${secondary}'/></linearGradient></defs>` +
-      `<rect width='100%' height='100%' fill='url(%23g)'/>` +
-      `<g fill='rgba(255,255,255,0.06)'><circle cx='48' cy='16' r='10'/></g>` +
-      `</svg>`
-
-    return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
-  }
 
   useEffect(() => {
     let mounted = true
@@ -116,9 +76,7 @@ function RouteComponent() {
           const data = snap.data()
           setProfile(data)
 
-          // Check if account is disabled
           if (data?.isActive === false) {
-            // mark auth checked and return; UI will show the disabled state
             setAuthChecked(true)
             return
           }
@@ -143,98 +101,48 @@ function RouteComponent() {
     }
   }, [navigate])
 
-  // mobile sheet removed — fixed bottom nav is used on small screens
-
-  // FIX: Check if account is disabled or email not verified
   const isAccountDisabled = profile?.isActive === false
   const isEmailVerified = user?.emailVerified
 
-  // Prevent access if account is disabled (professional UI)
+  // Account disabled screen
   if (authChecked && isAccountDisabled) {
     return (
-      <>
-      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md p-6 rounded-lg">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-sm border">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account disabled</h2>
-            <p className="text-sm text-gray-600 mb-6 max-w-xl">
-              Your account has been disabled. If you believe this is an error, contact one of our support staff below and we'll help restore access.
-            </p>
-
-            <div className="hidden  items-center gap-5 mb-6">
-              {supportTeam.map((s) => {
-                const parts = (s.full || '').split(' ').filter(Boolean)
-                const first = (parts[0] || '').trim()
-                const last = (parts[1] || '').trim()
-                const initials = ((first?.[0] || '') + (last?.[0] || '')).toUpperCase() || (first?.[0] || 'U')
-                return (
-                  <a
-                    key={s.full}
-                    href={s.url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center text-center"
-                  >
-                    <Avatar
-                      className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-semibold`}
-                      style={{
-                        backgroundImage: makeBgDataUrl(s.primary, s.secondary),
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    >
-                        <AvatarFallback style={{ backgroundColor: '#3b82f6' }} className="text-white text-lg">{initials}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-gray-700 mt-2">{first || s.full}</span>
-                  </a>
-                )
-              })}
-            </div>
-
-            <div className="flex flex-col items-center gap-3 pb-5">
-              
-              <Button onClick={handleLogout} variant="destructive" className="w-40">Sign out</Button>
-            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Disabled</h2>
+            <p className="text-gray-600 mb-6">Your account has been disabled. Please contact support.</p>
+            <Button onClick={handleLogout} variant="destructive" className="w-full">Sign Out</Button>
           </div>
         </div>
       </div>
-
-      {/* portal tooltip removed */}
-
-      </>
     )
   }
 
-  // Prevent access if email not verified (professional UI)
+  // Email verification screen
   if (authChecked && user && !isEmailVerified) {
     return (
-          <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md p-6 rounded-lg">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-20 h-20 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
-              <Mail className="h-10 w-10 text-amber-500" />
+      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-sm border">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
+              <Mail className="h-8 w-8 text-amber-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Verify your email</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              A verification link was sent to <span className="font-medium text-gray-900">{user?.email}</span>. Please open that email and click the link to continue.
-            </p>
-
-            <div className="w-full space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Verify Your Email</h2>
+            <p className="text-gray-600 mb-4">Please verify your email address to continue.</p>
+            <div className="space-y-3">
               <Button
                 onClick={sendVerificationEmail}
                 disabled={sendingVerification}
-                className="w-full py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white"
+                className="w-full"
               >
-                <Mail className="h-5 w-5 mr-2" />
-                {sendingVerification ? 'Sending...' : 'Resend verification email'}
+                <Mail className="h-4 w-4 mr-2" />
+                {sendingVerification ? 'Sending...' : 'Resend Verification Email'}
               </Button>
-
-              <div className="flex items-center justify-center">
-                <Button onClick={handleLogout} variant="outline" className="py-2 px-5">Sign out</Button>
-              </div>
+              <Button onClick={handleLogout} variant="outline" className="w-full">Sign Out</Button>
             </div>
           </div>
         </div>
@@ -244,12 +152,12 @@ function RouteComponent() {
 
   if (!authChecked) {
     return (
-      <div className="h-screen w-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16  rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16  rounded-lg flex items-center justify-center mx-auto mb-4">
             <img src={logo} alt="UtilityGuy" className="h-8 w-8" />
           </div>
-          <div className="text-gray-600 font-medium">Loading your dashboard...</div>
+          <div className="text-gray-600">Loading dashboard...</div>
         </div>
       </div>
     )
@@ -257,14 +165,12 @@ function RouteComponent() {
 
   async function sendVerificationEmail() {
     if (!user) return
-    
     setSendingVerification(true)
     try {
       await sendEmailVerification(user)
-      alert('✅ Verification email sent! Please check your inbox.')
+      alert('Verification email sent! Please check your inbox.')
     } catch (error) {
-      console.error('Error sending verification:', error)
-      alert('❌ Failed to send verification email. Please try again.')
+      alert('Failed to send verification email. Please try again.')
     } finally {
       setSendingVerification(false)
     }
@@ -273,320 +179,378 @@ function RouteComponent() {
   async function handleLogout() {
     try {
       await signOut(auth)
+      navigate({ to: '/' })
     } catch (err) {
       console.error('Logout error:', err)
-    } finally {
-      navigate({ to: '/' })
     }
   }
 
-  const path = typeof window !== 'undefined' ? window.location.pathname : ''
+  const displayName = profile?.name && profile?.surname 
+    ? `${profile.name} ${profile.surname}`
+    : user?.displayName || user?.email || 'User'
 
-  const displayName = (
-    (profile && ((profile.name ? profile.name : '') + (profile.surname ? ` ${profile.surname}` : '')).trim()) ||
-    user?.displayName ||
-    user?.email ||
-    'User'
-  )
+  const userInitials = profile?.name && profile?.surname 
+    ? `${profile.name[0]}${profile.surname[0]}`.toUpperCase()
+    : (user?.email?.[0] || 'U').toUpperCase()
 
-  const displayInitials = (() => {
-    if (profile && (profile.name || profile.surname)) {
-      const a = (profile.name || '').trim().slice(0, 1)
-      const b = (profile.surname || '').trim().slice(0, 1)
-      return (a + b).toUpperCase()
-    }
-    if (user?.displayName) {
-      const parts = user.displayName.split(' ').filter(Boolean)
-      return parts.map((p: string) => p[0]).slice(0, 2).join('').toUpperCase()
-    }
-    return (user?.email?.charAt(0) || 'U').toUpperCase()
-  })()
-
-  const navigationItems = [
+  // Navigation structure exactly as specified, with admin under dashboard
+  const navigationSections = [
     {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: LayoutDashboard,
-      active: path === '/dashboard',
-      description: 'Overview'
+      name: 'Metrics',
+      icon: BarChart3,
+      items: [
+        {
+          name: 'Electricity Metrics',
+          href: '/dashboard',
+          icon: Zap,
+          active: path === '/dashboard',
+          description: 'Charts & analytics'
+        },
+        {
+          name: 'Water Metrics',
+          href: '/dashboard/water',
+          icon: Droplet,
+          active: path === '/dashboard/water',
+          description: 'Charts & analytics'
+        }
+      ]
     },
     {
-      name: 'Electricity',
-      href: '/dashboard/electricity',
-      icon: Zap,
-      active: path.startsWith('/dashboard/electricity'),
-      description: 'Power management'
-    },
-    {
-      name: 'Water',
-      href: '/dashboard/water',
-      icon: Droplet,
-      active: path.startsWith('/dashboard/water'),
-      description: 'Water management'
-    },
-    {
-      name: 'Purchases',
-      href: '/dashboard/purchases',
-      icon: CreditCard,
-      active: path.startsWith('/dashboard/purchases'),
-      description: 'Transaction history'
-    },
-    {
-      name: 'Auto-Buy',
-      href: '/dashboard/auto-buy',
-      icon: RefreshCw,
-      active: path.startsWith('/dashboard/auto-buy'),
-      description: 'Automatic top-ups'
+      name: 'Utilities',
+      icon: Wrench,
+      items: [
+        {
+          name: 'Electricity Management',
+          href: '/dashboard/utilities',
+          icon: Zap,
+          active: path === '/dashboard/utilities',
+          description: 'Purchase & settings'
+        },
+        {
+          name: 'Water Management',
+          href: '/dashboard/utilities/water',
+          icon: Droplet,
+          active: path === '/dashboard/utilities/water',
+          description: 'Purchase & settings'
+        }
+      ]
     },
     {
       name: 'Wallet',
-      href: '/dashboard/wallet',
       icon: Wallet,
-      active: path === '/dashboard/wallet',
-      description: 'Balance & payments'
-    },
-  ]
-
-  const settingsItems = [
-    {
-      name: 'Profile',
-      href: '/dashboard/profile',
-      icon: User,
-      active: path === '/dashboard/profile',
-      description: 'Personal information'
+      items: [
+        {
+          name: 'Balance',
+          href: '/dashboard/wallet',
+          icon: Wallet,
+          active: path === '/dashboard/wallet',
+          description: 'Balance & payments'
+        },
+        {
+          name: 'History',
+          href: '/dashboard/wallet/history',
+          icon: CreditCard,
+          active: path === '/dashboard/wallet/history',
+          description: 'Transaction history'
+        },
+        {
+          name: 'Auto Top-up',
+          href: '/dashboard/wallet/auto',
+          icon: RefreshCw,
+          active: path === '/dashboard/wallet/auto',
+          description: 'Automated top-up'
+        }
+      ]
     },
     {
       name: 'Settings',
-      href: '/dashboard/settings',
       icon: Settings,
-      active: path === '/dashboard/settings',
-      description: 'Preferences'
+      items: [
+        {
+          name: 'Profile',
+          href: '/dashboard/settings',
+          icon: User,
+          active: path === '/dashboard/settings',
+          description: 'Personal information'
+        },
+        {
+          name: 'Account',
+          href: '/dashboard/settings/account',
+          icon: Settings,
+          active: path === '/dashboard/settings/account',
+          description: 'Email & password'
+        }
+      ]
     }
   ]
 
-  const adminItems = [
-    {
-      name: 'Admin Panel',
-      href: '/dashboard/admin',
-      icon: Shield,
-      active: path.startsWith('/dashboard/admin'),
-      description: 'System administration'
-    }
-  ]
-
-  // helper to determine active state by item name (used by mobile bottom nav)
-  const isActive = (name: string) => {
-    return (
-      navigationItems.find((i) => i.name === name)?.active ||
-      settingsItems.find((i) => i.name === name)?.active ||
-      adminItems.find((i) => i.name === name)?.active ||
-      false
-    )
+  const adminSection = {
+    name: 'Admin',
+    icon: Shield,
+    items: [
+      {
+        name: 'Admin Metrics',
+        href: '/dashboard/admin',
+        icon: BarChart3,
+        active: path === '/dashboard/admin',
+        description: 'Platform overview'
+      },
+      {
+        name: 'User Management',
+        href: '/dashboard/admin/users',
+        icon: Users,
+        active: path === '/dashboard/admin/users',
+        description: 'Manage users'
+      }
+    ]
   }
 
+  const NavigationItem = ({ item, compact = false }: { item: any, compact?: boolean }) => (
+    <Link
+      to={item.href}
+      className={`flex items-center ${
+        compact ? 'justify-center px-2 py-2' : 'px-3 py-2 gap-3'
+      } rounded-lg text-sm font-medium transition-colors ${
+        item.active 
+          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+          : 'text-gray-700 hover:bg-gray-100'
+      }`}
+      title={compact ? item.name : undefined}
+    >
+      <item.icon className="h-4 w-4 shrink-0" />
+      {!compact && <span className="truncate">{item.name}</span>}
+    </Link>
+  )
 
-  const NavigationItem = ({ item, compact = false }: { item: any, compact?: boolean }) => {
-    return (
-      <Link
-        to={item.href as string}
-        title={compact ? item.name : undefined}
-        className={`group relative flex items-center ${
-          compact ? 'justify-center px-3 py-3' : 'px-4 py-3 gap-4'
-        } rounded-xl transition-all duration-200 ${
-          item.active ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
-        }`}
-      >
-        <div className={`p-2 rounded-lg ${
-          item.active ? 'bg-transparent' : 'bg-gray-100 group-hover:bg-gray-200'
-        }`}>
-          <item.icon className={`h-4 w-4 ${item.active ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'}`} />
-        </div>
-        {!compact && (
-          <div className="flex-1 min-w-0">
-            <div className={`font-semibold text-sm ${item.active ? 'text-blue-600' : 'text-gray-900'}`}>{item.name}</div>
-            <div className={`text-xs ${item.active ? 'text-blue-600' : 'text-gray-500'}`}>
-              {item.description}
-            </div>
-          </div>
-        )}
-      </Link>
-    )
-  }
+  // Mobile section active states
+  const isMetricsActive = path === '/dashboard' || path === '/dashboard/water'
+  const isUtilitiesActive = path.startsWith('/dashboard/utilities')
+  const isWalletActive = path.startsWith('/dashboard/wallet')
+  const isSettingsActive = path.startsWith('/dashboard/settings')
+
 
   return (
-  <div className="h-screen w-screen bg-linear-to-br from-gray-50 to-blue-50/30 flex overflow-visible">
-      {/* MODERN Desktop Sidebar */}
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
+      {/* Desktop Sidebar */}
       <div className={`
-        hidden md:flex flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/50 transition-all duration-300 overflow-visible
-        ${isCollapsed ? 'w-20' : 'w-80'} shadow-xl
+        hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300
+        ${isCollapsed ? 'w-16' : 'w-64'}
       `}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200/50 shrink-0">
+        <div className="p-4 border-b border-gray-200">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isCollapsed && (
+            {!isCollapsed ? (
               <div className="flex items-center gap-3">
-                <Link to="/dashboard/profile" className="flex items-center gap-3">
-                  {user?.photoURL ? (
-                    <img
-                      src={user.photoURL}
-                      alt="Profile"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                      {displayInitials}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div title={displayName} className="font-semibold text-gray-900 text-sm truncate">{displayName}</div>
-                    <div title={user?.email || ''} className="text-xs text-gray-500 truncate">{user?.email || ''}</div>
-                  </div>
-                </Link>
-              </div>
-            )}
-            {isCollapsed && (
-              <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <img src={logo} alt="UtilityGuy" className="h-6 w-6" />
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <img src={logo} alt="UtilityGuy" className="h-5 w-5" />
                 </div>
-            )}
+                <span className="font-bold text-gray-900">UtilityGuy</span>
+              </div>
+            ) : null}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all hover:scale-105 text-gray-500"
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
+              title={isCollapsed ? 'Expand' : 'Collapse'}
             >
               {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
-       
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* Main Navigation */}
-          <div className="space-y-2">
-            {navigationItems.map((item) => (
-              <NavigationItem key={item.name} item={item} compact={isCollapsed} />
-            ))}
-          </div>
-
-          {/* Settings Section */}
-          <div className="pt-4 space-y-2">
-            {settingsItems.map((item) => (
-              <NavigationItem key={item.name} item={item} compact={isCollapsed} />
-            ))}
-          </div>
-
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+          {navigationSections.map((section) => (
+            <div key={section.name} className="space-y-2">
+              {!isCollapsed && (
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">
+                  {section.name}
+                </div>
+              )}
+              {section.items.map((item) => (
+                <NavigationItem key={item.name} item={item} compact={isCollapsed} />
+              ))}
+            </div>
+          ))}
+          
           {/* Admin Section */}
           {(profile?.isAdmin || profile?.role === 'admin') && (
-            <div className="pt-6 space-y-2 border-t border-gray-200/50">
-              {adminItems.map((item) => (
+            <div className="space-y-2 pt-4 border-t border-gray-200">
+              {!isCollapsed && (
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">
+                  {adminSection.name}
+                </div>
+              )}
+              {adminSection.items.map((item) => (
                 <NavigationItem key={item.name} item={item} compact={isCollapsed} />
               ))}
             </div>
           )}
         </nav>
 
-        {/* Sign Out Button */}
-        <div className="p-4 border-t border-gray-200/50 shrink-0">
+        {/* User & Sign Out */}
+        <div className="p-4 border-t border-gray-200 space-y-3">
+          {!isCollapsed && (
+            <Link
+              to="/dashboard/settings"
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                  {userInitials}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
+                <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+              </div>
+            </Link>
+          )}
           <Button 
             onClick={handleLogout} 
-            variant="destructive" 
-            className={`w-full justify-start text-black hover:border-red-200 hover:scale-105 transition-all ${
-              isCollapsed ? 'justify-center px-3 py-3' : 'py-3'
-            }`}
+            variant="outline" 
+            className={`w-full justify-start ${isCollapsed ? 'justify-center px-2' : ''}`}
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            {!isCollapsed && <span className="ml-3 font-light">Sign Out</span>}
+            {!isCollapsed && <span className="ml-2">Sign Out</span>}
           </Button>
         </div>
       </div>
 
-      {/* mobile bottom-sheet removed */}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header - only hamburger, no shadow */}
-        <header className="md:hidden  p-3 shrink-0 sticky top-0 z-40">
-        
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="p-4 md:p-6 min-h-full pb-24 md:pb-0">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden md:p-4">
+       
             <Outlet />
-          </div>
-        </main>
+          
       </div>
-      {/* Mobile fixed bottom nav (uses shadcn Popover for "More") */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden w-full z-40">
-        <div className="w-full bg-white/95 backdrop-blur-sm rounded-t-md shadow-lg border-t border-gray-200/60 flex items-center justify-between px-2 py-2 gap-1">
-          <Link to="/dashboard" className={`flex-1 text-center p-1 ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`}>
-            <div className="flex flex-col items-center">
-              <Home className={`h-6 w-6 ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
-              <span className={`text-xs font-light ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`}>Home</span>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200">
+        <div className="flex items-center justify-between px-2 py-3">
+          {/* Metrics */}
+          <Link to="/dashboard" className="flex-1 text-center">
+            <BarChart3 className={`h-5 w-5 mx-auto ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <div className={`text-[10px] mt-1 ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`}>
+              Metrics
             </div>
           </Link>
 
-          <Link to={'/dashboard/electricity' as any} className={`flex-1 text-center p-1 ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`}>
-            <div className="flex flex-col items-center">
-              <Zap className={`h-6 w-6 ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
-              <span className={`text-xs font-light ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`}>Electricity</span>
+          {/* Utilities */}
+          <Link to="/dashboard/utilities" className="flex-1 text-center">
+            <Wrench className={`h-5 w-5 mx-auto ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <div className={`text-[10px] mt-1 ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`}>
+              Utilities
             </div>
           </Link>
 
-          <Link to={'/dashboard/water' as any} className={`flex-1 text-center p-1 ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`}>
-            <div className="flex flex-col items-center">
-              <Droplet className={`h-6 w-6 ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
-              <span className={`text-xs font-light ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`}>Water</span>
+          {/* Wallet */}
+          <Link to="/dashboard/wallet" className="flex-1 text-center">
+            <Wallet className={`h-5 w-5 mx-auto ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <div className={`text-[10px] mt-1 ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`}>
+              Wallet
             </div>
           </Link>
 
-          <Link to={'/dashboard/purchases' as any} className={`flex-1 text-center p-1 ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`}>
-            <div className="flex flex-col items-center">
-              <CreditCard className={`h-6 w-6 ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
-              <span className={`text-xs font-light ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`}>Purchases</span>
+          {/* Settings */}
+          <Link to="/dashboard/settings" className="flex-1 text-center">
+            <Settings className={`h-5 w-5 mx-auto ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <div className={`text-[10px] mt-1 ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`}>
+              Settings
             </div>
           </Link>
 
-          <div className="pl-1">
-            <Popover open={moreOpen} onOpenChange={(open) => setMoreOpen(open)}>
+          {/* More Menu */}
+          <div className="flex-1 text-center">
+            <Popover open={moreOpen} onOpenChange={setMoreOpen}>
               <PopoverTrigger asChild>
-                <button className="p-2 rounded-md hover:bg-gray-100" aria-label="More">
-                  <Menu className="h-6 w-6 text-gray-700" />
+                <button className="mx-auto w-12 h-12 flex items-center justify-center rounded-lg hover:bg-gray-100">
+                  <Menu className="h-5 w-5 text-gray-600" />
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" side="top" className="w-56 p-2">
-                <div className="flex flex-col space-y-1">
-                  {[...navigationItems, ...settingsItems].map((item) => {
-                    if (['Dashboard', 'Electricity', 'Water', 'Purchases'].includes(item.name)) return null
-                    return (
-                      <Link key={item.name} to={item.href as any} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50">
-                        <item.icon className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm">{item.name}</span>
+                <div className="space-y-1">
+                  {/* Water Metrics */}
+                  <Link
+                    to="/dashboard/water"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <Droplet className="h-4 w-4" />
+                    <span className="text-sm">Water Metrics</span>
+                  </Link>
+
+                  {/* Water Management */}
+                  <Link
+                    to="/dashboard/utilities/water"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <Droplet className="h-4 w-4" />
+                    <span className="text-sm">Water Management</span>
+                  </Link>
+
+                  {/* Wallet Sections */}
+                  <Link
+                    to="/dashboard/wallet/history"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span className="text-sm">History</span>
+                  </Link>
+
+                  <Link
+                    to="/dashboard/wallet/auto"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="text-sm">Auto Top-up</span>
+                  </Link>
+
+                  {/* Account */}
+                  <Link
+                    to="/dashboard/settings/account"
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="text-sm">Account</span>
+                  </Link>
+
+                  {/* Admin */}
+                  {(profile?.isAdmin || profile?.role === 'admin') && (
+                    <>
+                      <Link
+                        to="/dashboard/admin"
+                        className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        <span className="text-sm">Admin Metrics</span>
                       </Link>
-                    )
-                  })}
+                      <Link
+                        to="/dashboard/admin/users"
+                        className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span className="text-sm">User Management</span>
+                      </Link>
+                    </>
+                  )}
 
-                  {(profile?.isAdmin || profile?.role === 'admin') && adminItems.map((item) => (
-                    <Link key={item.name} to={item.href as any} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50">
-                      <item.icon className="h-4 w-4 text-gray-600" />
-                      <span className="text-sm">{item.name}</span>
-                    </Link>
-                  ))}
-
-                  <div className="border-t pt-2 mt-2">
+                  <div className="border-t pt-2">
                     <button
                       onClick={() => { setMoreOpen(false); handleLogout(); }}
                       className="w-full text-left p-2 rounded-md hover:bg-gray-50 flex items-center gap-2 text-sm text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>Sign out</span>
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </div>
               </PopoverContent>
             </Popover>
+            <div className="text-[10px] text-gray-600 mt-1">More</div>
           </div>
         </div>
       </div>

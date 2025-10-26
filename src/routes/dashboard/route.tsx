@@ -47,7 +47,6 @@ function RouteComponent() {
     [key: string]: any
   }
 
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [user, setUser] = useState<FirebaseUser | null>(null)
@@ -144,10 +143,7 @@ function RouteComponent() {
     }
   }, [navigate])
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileOpen(false)
-  }, [location.pathname])
+  // mobile sheet removed — fixed bottom nav is used on small screens
 
   // FIX: Check if account is disabled or email not verified
   const isAccountDisabled = profile?.isActive === false
@@ -378,6 +374,16 @@ function RouteComponent() {
     }
   ]
 
+  // helper to determine active state by item name (used by mobile bottom nav)
+  const isActive = (name: string) => {
+    return (
+      navigationItems.find((i) => i.name === name)?.active ||
+      settingsItems.find((i) => i.name === name)?.active ||
+      adminItems.find((i) => i.name === name)?.active ||
+      false
+    )
+  }
+
 
   const NavigationItem = ({ item, compact = false }: { item: any, compact?: boolean }) => {
     return (
@@ -496,108 +502,13 @@ function RouteComponent() {
         </div>
       </div>
 
-      {/* Mobile Menu (Same as before - Bottom Sheet) */}
-      {isMobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div 
-            className="absolute inset-0 bg-black/20" 
-            onClick={() => setIsMobileOpen(false)} 
-            aria-hidden 
-          />
-          
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl border-t border-gray-200 max-h-[85vh] overflow-hidden divide-y divide-gray-100">
-            <div className="flex justify-center p-3">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-            </div>
-
-            <div className="px-6 py-4">
-              <div className="flex items-center gap-3">
-                {user?.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-2xl object-cover border border-gray-200"
-                  />
-                ) : (
-                    <div title={displayName} className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg truncate">
-                      {displayInitials}
-                    </div>
-                )}
-                  <div className="flex-1 min-w-0">
-                    <p title={displayName} className="text-lg font-light text-gray-900 truncate">{displayName}</p>
-                    <p title={user?.email || ''} className="text-sm font-light text-gray-500 truncate">{user?.email || ''}</p>
-                  </div>
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto">
-              <div className="grid grid-cols-3 gap-3">
-                {[...navigationItems, ...settingsItems].map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href as any}
-                    onClick={() => setIsMobileOpen(false)}
-                    className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
-                      item.active 
-                        ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                        : 'border-gray-100 text-gray-600 hover:bg-gray-50 hover:border-gray-200'
-                    }`}
-                  >
-                    <item.icon className="h-6 w-6 mb-2" strokeWidth={1} />
-                    <span className="text-xs font-light text-center">{item.name}</span>
-                  </Link>
-                ))}
-
-                {(profile?.isAdmin || profile?.role === 'admin') && adminItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href as any}
-                    onClick={() => setIsMobileOpen(false)}
-                    className="flex flex-col items-center p-4 rounded-xl border-2 border-purple-100 text-purple-700 hover:bg-purple-50 hover:border-purple-200 transition-all"
-                  >
-                    <item.icon className="h-6 w-6 mb-2" strokeWidth={1} />
-                    <span className="text-xs font-light text-center">{item.name}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className="px-4 pb-4 pt-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  to="/"
-                  className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                >
-                  <Home className="h-4 w-4" strokeWidth={1} />
-                  <span className="text-sm font-light">Home</span>
-                </Link>
-                <Button 
-                  onClick={handleLogout} 
-                  variant="outline" 
-                  className="flex items-center justify-center gap-2 p-3 h-auto text-red-600 hover:text-red-700 hover:border-red-200"
-                >
-                  <LogOut className="h-4 w-4" strokeWidth={1} />
-                  <span className="text-sm font-light">Sign Out</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* mobile bottom-sheet removed */}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header - only hamburger, no shadow */}
         <header className="md:hidden  p-3 shrink-0 sticky top-0 z-40">
-          <div className="flex items-center">
-            <button
-              onClick={() => setIsMobileOpen(true)}
-              className="p-2 rounded-md bg-white text-gray-600"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
+        
         </header>
 
         {/* Main Content */}
@@ -608,33 +519,33 @@ function RouteComponent() {
         </main>
       </div>
       {/* Mobile fixed bottom nav (uses shadcn Popover for "More") */}
-      <div className="fixed bottom-4 left-0 right-0 md:hidden px-4 z-40">
-        <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/60 flex items-center justify-between px-2 py-2 gap-1">
-          <Link to="/dashboard" className="flex-1 text-center p-1">
+      <div className="fixed bottom-0 left-0 right-0 md:hidden w-full z-40">
+        <div className="w-full bg-white/95 backdrop-blur-sm rounded-t-md shadow-lg border-t border-gray-200/60 flex items-center justify-between px-2 py-2 gap-1">
+          <Link to="/dashboard" className={`flex-1 text-center p-1 ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`}>
             <div className="flex flex-col items-center">
-              <Home className="h-6 w-6 text-gray-700" strokeWidth={1} />
-              <span className="text-xs font-light text-gray-700">Home</span>
+              <Home className={`h-6 w-6 ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
+              <span className={`text-xs font-light ${isActive('Dashboard') ? 'text-blue-600' : 'text-gray-700'}`}>Home</span>
             </div>
           </Link>
 
-          <Link to={'/dashboard/electricity' as any} className="flex-1 text-center p-1">
+          <Link to={'/dashboard/electricity' as any} className={`flex-1 text-center p-1 ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`}>
             <div className="flex flex-col items-center">
-              <Zap className="h-6 w-6 text-gray-700" strokeWidth={1} />
-              <span className="text-xs font-light text-gray-700">Electricity</span>
+              <Zap className={`h-6 w-6 ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
+              <span className={`text-xs font-light ${isActive('Electricity') ? 'text-blue-600' : 'text-gray-700'}`}>Electricity</span>
             </div>
           </Link>
 
-          <Link to={'/dashboard/water' as any} className="flex-1 text-center p-1">
+          <Link to={'/dashboard/water' as any} className={`flex-1 text-center p-1 ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`}>
             <div className="flex flex-col items-center">
-              <Droplet className="h-6 w-6 text-gray-700" strokeWidth={1} />
-              <span className="text-xs font-light text-gray-700">Water</span>
+              <Droplet className={`h-6 w-6 ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
+              <span className={`text-xs font-light ${isActive('Water') ? 'text-blue-600' : 'text-gray-700'}`}>Water</span>
             </div>
           </Link>
 
-          <Link to={'/dashboard/purchases' as any} className="flex-1 text-center p-1">
+          <Link to={'/dashboard/purchases' as any} className={`flex-1 text-center p-1 ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`}>
             <div className="flex flex-col items-center">
-              <CreditCard className="h-6 w-6 text-gray-700" strokeWidth={1} />
-              <span className="text-xs font-light text-gray-700">Purchases</span>
+              <CreditCard className={`h-6 w-6 ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1} />
+              <span className={`text-xs font-light ${isActive('Purchases') ? 'text-blue-600' : 'text-gray-700'}`}>Purchases</span>
             </div>
           </Link>
 

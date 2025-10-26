@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui/button'
 import logo from '../logo.svg'
 import { Link } from '@tanstack/react-router'
-import { Zap, Droplet, Lock, Shield, Battery,  CheckCircle, ArrowRight } from 'lucide-react'
+import { Zap, Droplet, Lock, Shield, Battery,  CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/')({
@@ -248,12 +248,7 @@ function Landing() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Link to="/auth" className="text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors">
-          Sign in
-        </Link>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-          <Link to="/auth/register">Get Started</Link>
-        </Button>
+        {/* Auth links moved to hero actions */}
       </div>
     </motion.header>
   )
@@ -299,12 +294,14 @@ function Landing() {
               transition={{ delay: 0.4 }}
             >
               <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white text-base px-8 py-3">
-                <Link to="/auth/register" className="flex items-center gap-2">
-                  Start Free Trial <ArrowRight size={18} />
+                <Link to="/auth" className="flex items-center gap-2">
+                  Sign in
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8 py-3 border-gray-300">
-                View Live Demo
+              <Button asChild size="lg" variant="outline" className="text-base px-8 py-3 border-gray-300">
+                <Link to="/auth/register" className="flex items-center gap-2">
+                  Register
+                </Link>
               </Button>
             </motion.div>
 
@@ -442,10 +439,10 @@ function Landing() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100 text-base px-8 py-3 font-semibold">
-              <Link to="/auth/register">Start Free Trial</Link>
+              <Link to="/auth/register">Start Now</Link>
             </Button>
             <Button size="lg" variant="outline" className="border-white text-blue-600 hover:bg-white hover:text-blue-600 text-base px-8 py-3">
-              Schedule Demo
+              <Link to="/auth">Sign in</Link>
             </Button>
           </div>
           

@@ -121,6 +121,32 @@ function RouteComponent() {
     }
   })
 
+  function formatDobForInput(val: any) {
+    if (!val) return ''
+    try {
+      const d = typeof val === 'string' ? new Date(val) : val?.seconds ? new Date(val.seconds * 1000) : val?.toDate ? val.toDate() : new Date(val)
+      if (isNaN(d.getTime())) return ''
+      // yyyy-mm-dd for input[type=date]
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    } catch {
+      return ''
+    }
+  }
+
+  function formatDobDisplay(val: any) {
+    if (!val) return ''
+    try {
+      const d = typeof val === 'string' ? new Date(val) : val?.seconds ? new Date(val.seconds * 1000) : val?.toDate ? val.toDate() : new Date(val)
+      if (isNaN(d.getTime())) return String(val)
+      return d.toLocaleDateString()
+    } catch {
+      return String(val)
+    }
+  }
+
   
 
   function openModal(u: any) {
@@ -130,7 +156,7 @@ function RouteComponent() {
       name: u.name || '',
       surname: u.surname || '',
       phoneNumber: u.phoneNumber || '',
-      dob: u.dob || '',
+      dob: formatDobForInput(u.dob) || '',
       gender: u.gender || '',
       isActive: !!u.isActive,
       isAdmin: !!u.isAdmin,
@@ -298,7 +324,7 @@ function RouteComponent() {
                   <TableCell className="py-3">{`${u.name || ''} ${u.surname || ''}`}</TableCell>
                   <TableCell className="py-3 text-sm text-gray-700">{u.email}</TableCell>
                   <TableCell className="py-3">{u.phoneNumber || ''}</TableCell>
-                  <TableCell className="py-3">{u.dob || ''}</TableCell>
+                  <TableCell className="py-3">{formatDobDisplay(u.dob)}</TableCell>
                   <TableCell className="py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${u.gender === 'male' ? 'bg-blue-100 text-blue-800' : u.gender === 'female' ? 'bg-pink-100 text-pink-800' : 'bg-gray-100 text-gray-800'}`}>
                       {u.gender || '—'}
@@ -309,7 +335,11 @@ function RouteComponent() {
                       {u.isActive ? 'Active' : 'Disabled'}
                     </span>
                   </TableCell>
-                  <TableCell className="py-3">{u.isAdmin ? 'Yes' : 'No'}</TableCell>
+                  <TableCell className="py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${u.isAdmin ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {u.isAdmin ? 'Admin' : 'User'}
+                    </span>
+                  </TableCell>
                   <TableCell className="py-3 text-xs text-gray-500">{u.createdAt ? (u.createdAt.seconds ? new Date(u.createdAt.seconds * 1000).toLocaleString() : new Date(u.createdAt).toLocaleString()) : ''}</TableCell>
                 </TableRow>
               ))

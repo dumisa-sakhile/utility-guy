@@ -49,6 +49,7 @@ function RouteComponent() {
 
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [user, setUser] = useState<FirebaseUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -638,9 +639,9 @@ function RouteComponent() {
           </Link>
 
           <div className="pl-1">
-            <Popover>
+            <Popover open={moreOpen} onOpenChange={(open) => setMoreOpen(open)}>
               <PopoverTrigger asChild>
-                <button className="p-2 rounded-md hover:bg-gray-100">
+                <button className="p-2 rounded-md hover:bg-gray-100" aria-label="More">
                   <Menu className="h-6 w-6 text-gray-700" />
                 </button>
               </PopoverTrigger>
@@ -662,6 +663,16 @@ function RouteComponent() {
                       <span className="text-sm">{item.name}</span>
                     </Link>
                   ))}
+
+                  <div className="border-t pt-2 mt-2">
+                    <button
+                      onClick={() => { setMoreOpen(false); handleLogout(); }}
+                      className="w-full text-left p-2 rounded-md hover:bg-gray-50 flex items-center gap-2 text-sm text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
                 </div>
               </PopoverContent>
             </Popover>

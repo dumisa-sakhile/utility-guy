@@ -17,6 +17,7 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settin
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as AuthResetRouteImport } from './routes/auth/reset'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
@@ -58,6 +59,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/auth/': typeof AuthIndexRoute
+  '/dashboard/admin': typeof DashboardAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/auth': typeof AuthIndexRoute
+  '/dashboard/admin': typeof DashboardAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/auth/': typeof AuthIndexRoute
+  '/dashboard/admin/': typeof DashboardAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/settings'
     | '/auth/'
+    | '/dashboard/admin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/settings'
     | '/auth'
+    | '/dashboard/admin'
   id:
     | '__root__'
     | '/'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/settings'
     | '/auth/'
+    | '/dashboard/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/dashboard/admin/': {
+      id: '/dashboard/admin/'
+      path: '/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof DashboardAdminIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
@@ -207,11 +226,13 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 interface DashboardRouteRouteChildren {
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardAdminIndexRoute: DashboardAdminIndexRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, Outlet, Link, useNavigate } from '@tanstack/react-router'
-import { createPortal } from 'react-dom'
 import { 
   LogOut, 
   Zap, 
@@ -22,12 +21,14 @@ import {
   Home,
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover'
 import { Avatar, AvatarFallback } from '../../components/ui/avatar'
 import { auth } from '../../config/firebase'
-import { signOut, sendEmailVerification } from 'firebase/auth'
+import { signOut, sendEmailVerification, type User as FirebaseUser } from 'firebase/auth'
 import { db } from '../../config/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import logo from '../../logo.svg'
+
 
 export const Route = createFileRoute('/dashboard')({
   component: RouteComponent,
@@ -36,14 +37,23 @@ export const Route = createFileRoute('/dashboard')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  interface Profile {
+    name?: string
+    surname?: string
+    isActive?: boolean
+    isAdmin?: boolean
+    role?: string
+    // allow additional fields from Firestore without errors
+    [key: string]: any
+  }
+
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<FirebaseUser | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [sendingVerification, setSendingVerification] = useState(false)
-  // tooltip state for collapsed sidebar items (rendered into a portal to avoid clipping)
-  const [tooltip, setTooltip] = useState<null | { label: string; top: number; left: number }>(null)
+  // NOTE: portal tooltip removed — compact sidebar items use the native title attribute instead
 
   const supportTeam = [
     {
@@ -195,14 +205,7 @@ function RouteComponent() {
         </div>
       </div>
 
-      {tooltip ? createPortal(
-        <div style={{ position: 'fixed', top: tooltip!.top, left: tooltip!.left, transform: 'translateY(-50%)', zIndex: 9999 }}>
-          <div className="whitespace-nowrap rounded-md bg-gray-900 text-white text-xs px-2 py-1 shadow-lg">
-            {tooltip!.label}
-          </div>
-        </div>,
-        document.body
-      ) : null}
+      {/* portal tooltip removed */}
 
       </>
     )
@@ -367,34 +370,19 @@ function RouteComponent() {
   const adminItems = [
     {
       name: 'Admin Panel',
-      href: '/admin',
+      href: '/dashboard/admin',
       icon: Shield,
-      active: path.startsWith('/admin'),
+      active: path.startsWith('/dashboard/admin'),
       description: 'System administration'
     }
   ]
 
 
   const NavigationItem = ({ item, compact = false }: { item: any, compact?: boolean }) => {
-    const ref = useRef<HTMLAnchorElement | null>(null)
-
-    function handleEnter() {
-      if (!ref.current) return
-      const rect = ref.current.getBoundingClientRect()
-      setTooltip({ label: item.name, top: rect.top + rect.height / 2, left: rect.right + 8 })
-    }
-    function handleLeave() {
-      setTooltip(null)
-    }
-
     return (
       <Link
-        to={item.href}
-        ref={ref as any}
-        onMouseEnter={compact ? handleEnter : undefined}
-        onMouseLeave={compact ? handleLeave : undefined}
-        onFocus={compact ? handleEnter : undefined}
-        onBlur={compact ? handleLeave : undefined}
+        to={item.href as string}
+        title={compact ? item.name : undefined}
         className={`group relative flex items-center ${
           compact ? 'justify-center px-3 py-3' : 'px-4 py-3 gap-4'
         } rounded-xl transition-all duration-200 ${
@@ -546,7 +534,7 @@ function RouteComponent() {
                 {[...navigationItems, ...settingsItems].map((item) => (
                   <Link
                     key={item.name}
-                    to={item.href}
+                    to={item.href as any}
                     onClick={() => setIsMobileOpen(false)}
                     className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
                       item.active 
@@ -562,7 +550,7 @@ function RouteComponent() {
                 {(profile?.isAdmin || profile?.role === 'admin') && adminItems.map((item) => (
                   <Link
                     key={item.name}
-                    to={item.href}
+                    to={item.href as any}
                     onClick={() => setIsMobileOpen(false)}
                     className="flex flex-col items-center p-4 rounded-xl border-2 border-purple-100 text-purple-700 hover:bg-purple-50 hover:border-purple-200 transition-all"
                   >
@@ -613,10 +601,72 @@ function RouteComponent() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="p-4 md:p-6 min-h-full">
+          <div className="p-4 md:p-6 min-h-full pb-24 md:pb-0">
             <Outlet />
           </div>
         </main>
+      </div>
+      {/* Mobile fixed bottom nav (uses shadcn Popover for "More") */}
+      <div className="fixed bottom-4 left-0 right-0 md:hidden px-4 z-40">
+        <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/60 flex items-center justify-between px-2 py-2 gap-1">
+          <Link to="/dashboard" className="flex-1 text-center p-1">
+            <div className="flex flex-col items-center">
+              <Home className="h-6 w-6 text-gray-700" strokeWidth={1} />
+              <span className="text-xs font-light text-gray-700">Home</span>
+            </div>
+          </Link>
+
+          <Link to={'/dashboard/electricity' as any} className="flex-1 text-center p-1">
+            <div className="flex flex-col items-center">
+              <Zap className="h-6 w-6 text-gray-700" strokeWidth={1} />
+              <span className="text-xs font-light text-gray-700">Electricity</span>
+            </div>
+          </Link>
+
+          <Link to={'/dashboard/water' as any} className="flex-1 text-center p-1">
+            <div className="flex flex-col items-center">
+              <Droplet className="h-6 w-6 text-gray-700" strokeWidth={1} />
+              <span className="text-xs font-light text-gray-700">Water</span>
+            </div>
+          </Link>
+
+          <Link to={'/dashboard/purchases' as any} className="flex-1 text-center p-1">
+            <div className="flex flex-col items-center">
+              <CreditCard className="h-6 w-6 text-gray-700" strokeWidth={1} />
+              <span className="text-xs font-light text-gray-700">Purchases</span>
+            </div>
+          </Link>
+
+          <div className="pl-1">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="p-2 rounded-md hover:bg-gray-100">
+                  <Menu className="h-6 w-6 text-gray-700" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" side="top" className="w-56 p-2">
+                <div className="flex flex-col space-y-1">
+                  {[...navigationItems, ...settingsItems].map((item) => {
+                    if (['Dashboard', 'Electricity', 'Water', 'Purchases'].includes(item.name)) return null
+                    return (
+                      <Link key={item.name} to={item.href as any} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50">
+                        <item.icon className="h-4 w-4 text-gray-600" />
+                        <span className="text-sm">{item.name}</span>
+                      </Link>
+                    )
+                  })}
+
+                  {(profile?.isAdmin || profile?.role === 'admin') && adminItems.map((item) => (
+                    <Link key={item.name} to={item.href as any} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50">
+                      <item.icon className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm">{item.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
       </div>
     </div>
   )

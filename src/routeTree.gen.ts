@@ -28,7 +28,6 @@ import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admi
 import { Route as DashboardWalletHistoryRouteImport } from './routes/dashboard/wallet/history'
 import { Route as DashboardWalletAutoRouteImport } from './routes/dashboard/wallet/auto'
 import { Route as DashboardUtilitiesWaterRouteImport } from './routes/dashboard/utilities/water'
-import { Route as DashboardSettingsAccountRouteImport } from './routes/dashboard/settings/account'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
 
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
@@ -126,12 +125,6 @@ const DashboardUtilitiesWaterRoute = DashboardUtilitiesWaterRouteImport.update({
   path: '/water',
   getParentRoute: () => DashboardUtilitiesRouteRoute,
 } as any)
-const DashboardSettingsAccountRoute =
-  DashboardSettingsAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => DashboardSettingsRouteRoute,
-  } as any)
 const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -152,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
-  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
@@ -169,7 +161,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
-  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
@@ -193,7 +184,6 @@ export interface FileRoutesById {
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
-  '/dashboard/settings/account': typeof DashboardSettingsAccountRoute
   '/dashboard/utilities/water': typeof DashboardUtilitiesWaterRoute
   '/dashboard/wallet/auto': typeof DashboardWalletAutoRoute
   '/dashboard/wallet/history': typeof DashboardWalletHistoryRoute
@@ -218,7 +208,6 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/dashboard/'
     | '/dashboard/admin/users'
-    | '/dashboard/settings/account'
     | '/dashboard/utilities/water'
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
@@ -235,7 +224,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/dashboard/admin/users'
-    | '/dashboard/settings/account'
     | '/dashboard/utilities/water'
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
@@ -258,7 +246,6 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/dashboard/'
     | '/dashboard/admin/users'
-    | '/dashboard/settings/account'
     | '/dashboard/utilities/water'
     | '/dashboard/wallet/auto'
     | '/dashboard/wallet/history'
@@ -409,13 +396,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUtilitiesWaterRouteImport
       parentRoute: typeof DashboardUtilitiesRouteRoute
     }
-    '/dashboard/settings/account': {
-      id: '/dashboard/settings/account'
-      path: '/account'
-      fullPath: '/dashboard/settings/account'
-      preLoaderRoute: typeof DashboardSettingsAccountRouteImport
-      parentRoute: typeof DashboardSettingsRouteRoute
-    }
     '/dashboard/admin/users': {
       id: '/dashboard/admin/users'
       path: '/users'
@@ -456,13 +436,11 @@ const DashboardAdminRouteRouteWithChildren =
   DashboardAdminRouteRoute._addFileChildren(DashboardAdminRouteRouteChildren)
 
 interface DashboardSettingsRouteRouteChildren {
-  DashboardSettingsAccountRoute: typeof DashboardSettingsAccountRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
 }
 
 const DashboardSettingsRouteRouteChildren: DashboardSettingsRouteRouteChildren =
   {
-    DashboardSettingsAccountRoute: DashboardSettingsAccountRoute,
     DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
   }
 

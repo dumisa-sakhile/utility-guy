@@ -275,13 +275,6 @@ function DashboardLayout() {
           icon: User,
           active: path === '/dashboard/settings',
           description: 'Personal information'
-        },
-        {
-          name: 'Account',
-          href: '/dashboard/settings/account',
-          icon: Settings,
-          active: path === '/dashboard/settings/account',
-          description: 'Email & password'
         }
       ]
     }
@@ -373,8 +366,8 @@ function DashboardLayout() {
     navigate({ to: paths[value as keyof typeof paths] })
   }
 
-  const handleSettingsTabChange = (value: string) => {
-    navigate({ to: value === 'account' ? '/dashboard/settings/account' : '/dashboard/settings' })
+  const handleSettingsTabChange = () => {
+    navigate({ to:  '/dashboard/settings' })
   }
 
   const handleAdminTabChange = (value: string) => {
@@ -555,8 +548,9 @@ function DashboardLayout() {
           )}
         </div>
 
-        <main className="flex-1 overflow-auto p-2 md:p-0">
+        <main className="flex-1 overflow-auto p-2 pb-36 md:pb-0 md:p-0">
           <Outlet />
+          
         </main>
       </div>
 

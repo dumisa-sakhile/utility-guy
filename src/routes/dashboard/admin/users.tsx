@@ -62,7 +62,7 @@ function RouteComponent() {
   const [modalOpen, setModalOpen] = useState(false)
 
   // Fetch all users once and paginate/filter client-side. For large datasets switch to server-side cursors.
-  const { data: users = [], isLoading, error } = useQuery({
+  const { data: users = [], isPending, error } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const col = collection(db, 'users')
@@ -306,7 +306,7 @@ function RouteComponent() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isPending ? (
               <TableRow>
                 <TableCell colSpan={9}>Loading...</TableCell>
               </TableRow>

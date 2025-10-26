@@ -18,8 +18,10 @@ import {
   ChevronRight,
   Mail,
   AlertCircle,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover'
 import { auth } from '../../config/firebase'
 import { signOut, sendEmailVerification, type User as FirebaseUser } from 'firebase/auth'
@@ -52,6 +54,7 @@ function DashboardLayout() {
   const [authChecked, setAuthChecked] = useState(false)
   const [sendingVerification, setSendingVerification] = useState(false)
 
+  const isAdmin = profile?.isAdmin || profile?.role === 'admin'
 
   useEffect(() => {
     let mounted = true
@@ -154,7 +157,7 @@ function DashboardLayout() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16  rounded-lg flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4">
             <img src={logo} alt="UtilityGuy" className="h-8 w-8" />
           </div>
           <div className="text-gray-600">Loading dashboard...</div>
@@ -327,7 +330,56 @@ function DashboardLayout() {
   const isUtilitiesActive = path.startsWith('/dashboard/utilities')
   const isWalletActive = path.startsWith('/dashboard/wallet')
   const isSettingsActive = path.startsWith('/dashboard/settings')
+  const isAdminActive = path.startsWith('/dashboard/admin')
 
+  // Determine current section for mobile top heading
+  const getCurrentSection = () => {
+    if (isAdminActive) return 'Admin'
+    if (isSettingsActive) return 'Settings'
+    if (isWalletActive) return 'Wallet'
+    if (isUtilitiesActive) return 'Utilities'
+    if (isMetricsActive) return 'Metrics'
+    return 'Dashboard'
+  }
+
+  const currentSection = getCurrentSection()
+
+  const handleSectionBack = () => {
+    const basePaths = {
+      Metrics: '/dashboard',
+      Utilities: '/dashboard/utilities',
+      Wallet: '/dashboard/wallet',
+      Settings: '/dashboard/settings',
+      Admin: '/dashboard/admin'
+    }
+    navigate({ to: basePaths[currentSection as keyof typeof basePaths] || '/dashboard' })
+  }
+
+  // Tab change handlers
+  const handleMetricsTabChange = (value: string) => {
+    navigate({ to: value === 'water' ? '/dashboard/water' : '/dashboard' })
+  }
+
+  const handleUtilitiesTabChange = (value: string) => {
+    navigate({ to: value === 'water' ? '/dashboard/utilities/water' : '/dashboard/utilities' })
+  }
+
+  const handleWalletTabChange = (value: string) => {
+    const paths = {
+      balance: '/dashboard/wallet',
+      history: '/dashboard/wallet/history',
+      auto: '/dashboard/wallet/auto'
+    }
+    navigate({ to: paths[value as keyof typeof paths] })
+  }
+
+  const handleSettingsTabChange = (value: string) => {
+    navigate({ to: value === 'account' ? '/dashboard/settings/account' : '/dashboard/settings' })
+  }
+
+  const handleAdminTabChange = (value: string) => {
+    navigate({ to: value === 'users' ? '/dashboard/admin/users' : '/dashboard/admin' })
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -373,7 +425,7 @@ function DashboardLayout() {
           ))}
           
           {/* Admin Section */}
-          {(profile?.isAdmin || profile?.role === 'admin') && (
+          {isAdmin && (
             <div className="space-y-2 pt-4 border-t border-gray-200">
               {!isCollapsed && (
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">
@@ -423,103 +475,131 @@ function DashboardLayout() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden p-2 md:p-4">
-       
-            <Outlet />
-          
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden md:p-4">
+        {/* Mobile Top Heading */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSectionBack}
+            className="h-8 w-8 p-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-semibold text-gray-900">{currentSection}</h1>
+          <div className="w-8" /> {/* Spacer */}
+        </div>
+
+        {/* Mobile Sub-Tabs (for Metrics/Utilities/Wallet/Settings with subs) */}
+        <div className="md:hidden bg-white border-b border-gray-200">
+          {currentSection === 'Metrics' && (
+            <Tabs 
+              value={path === '/dashboard/water' ? 'water' : 'electricity'} 
+              onValueChange={handleMetricsTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="electricity">Electricity</TabsTrigger>
+                <TabsTrigger value="water">Water</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {currentSection === 'Utilities' && (
+            <Tabs 
+              value={path === '/dashboard/utilities/water' ? 'water' : 'electricity'} 
+              onValueChange={handleUtilitiesTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="electricity">Electricity</TabsTrigger>
+                <TabsTrigger value="water">Water</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {currentSection === 'Wallet' && (
+            <Tabs 
+              value={path.includes('history') ? 'history' : path.includes('auto') ? 'auto' : 'balance'} 
+              onValueChange={handleWalletTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="balance">Balance</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+                <TabsTrigger value="auto">Auto</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {currentSection === 'Settings' && (
+            <Tabs 
+              value={path.includes('account') ? 'account' : 'profile'} 
+              onValueChange={handleSettingsTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="account">Account</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {currentSection === 'Admin' && (
+            <Tabs 
+              value={path.includes('users') ? 'users' : 'metrics'} 
+              onValueChange={handleAdminTabChange}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="metrics">Metrics</TabsTrigger>
+                <TabsTrigger value="users">Users</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+
+        <main className="flex-1 overflow-auto p-2 md:p-0">
+          <Outlet />
+        </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200">
-        <div className="flex items-center justify-between px-2 py-3">
+      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 shadow-lg">
+        <div className="flex items-center justify-around px-2 py-2">
           {/* Metrics */}
-          <Link to="/dashboard" className="flex-1 text-center">
-            <BarChart3 className={`h-5 w-5 mx-auto ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <div className={`text-[10px] mt-1 ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`}>
-              Metrics
-            </div>
+          <Link to="/dashboard" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isMetricsActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <BarChart3 className={`h-6 w-6 ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-medium ${isMetricsActive ? 'text-blue-600' : 'text-gray-600'}`}>Metrics</span>
           </Link>
 
           {/* Utilities */}
-          <Link to="/dashboard/utilities" className="flex-1 text-center">
-            <Wrench className={`h-5 w-5 mx-auto ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <div className={`text-[10px] mt-1 ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`}>
-              Utilities
-            </div>
+          <Link to="/dashboard/utilities" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isUtilitiesActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <Wrench className={`h-6 w-6 ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-medium ${isUtilitiesActive ? 'text-blue-600' : 'text-gray-600'}`}>Utilities</span>
           </Link>
 
           {/* Wallet */}
-          <Link to="/dashboard/wallet" className="flex-1 text-center">
-            <Wallet className={`h-5 w-5 mx-auto ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <div className={`text-[10px] mt-1 ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`}>
-              Wallet
-            </div>
+          <Link to="/dashboard/wallet" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isWalletActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <Wallet className={`h-6 w-6 ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-medium ${isWalletActive ? 'text-blue-600' : 'text-gray-600'}`}>Wallet</span>
           </Link>
 
           {/* Settings */}
-          <Link to="/dashboard/settings" className="flex-1 text-center">
-            <Settings className={`h-5 w-5 mx-auto ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`} />
-            <div className={`text-[10px] mt-1 ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`}>
-              Settings
-            </div>
+          <Link to="/dashboard/settings" className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors ${isSettingsActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <Settings className={`h-6 w-6 ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`} />
+            <span className={`text-xs font-medium ${isSettingsActive ? 'text-blue-600' : 'text-gray-600'}`}>Settings</span>
           </Link>
 
-          {/* More Menu */}
-          <div className="flex-1 text-center">
+          {/* More Menu (always present after Settings) */}
+          <div className="flex flex-col items-center space-y-1 p-2">
             <Popover open={moreOpen} onOpenChange={setMoreOpen}>
               <PopoverTrigger asChild>
-                <button className="mx-auto w-12 h-12 flex items-center justify-center rounded-lg hover:bg-gray-100">
-                  <Menu className="h-5 w-5 text-gray-600" />
+                <button className={`flex flex-col items-center space-y-1 p-2 rounded-xl transition-colors hover:bg-gray-50 ${moreOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-600'}`}>
+                  <Menu className="h-6 w-6" />
+                  <span className={`text-xs font-medium ${moreOpen ? 'text-blue-600' : 'text-gray-600'}`}>More</span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" side="top" className="w-56 p-2">
+              <PopoverContent align="end" side="top" className="w-56 p-2 mt-2">
                 <div className="space-y-1">
-                  {/* Water Metrics */}
-                  <Link
-                    to="/dashboard/water"
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                  >
-                    <Droplet className="h-4 w-4" />
-                    <span className="text-sm">Water Metrics</span>
-                  </Link>
-
-                  {/* Water Management */}
-                  <Link
-                    to="/dashboard/utilities/water"
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                  >
-                    <Droplet className="h-4 w-4" />
-                    <span className="text-sm">Water Management</span>
-                  </Link>
-
-                  {/* Wallet Sections */}
-                  <Link
-                    to="/dashboard/wallet/history"
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    <span className="text-sm">History</span>
-                  </Link>
-
-                  <Link
-                    to="/dashboard/wallet/auto"
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    <span className="text-sm">Auto Top-up</span>
-                  </Link>
-
-                  {/* Account */}
-                  <Link
-                    to="/dashboard/settings/account"
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 text-gray-700"
-                  >
-                    <User className="h-4 w-4" />
-                    <span className="text-sm">Account</span>
-                  </Link>
-
-                  {/* Admin */}
-                  {(profile?.isAdmin || profile?.role === 'admin') && (
+                  {/* Admin (if applicable) */}
+                  {isAdmin && (
                     <>
                       <Link
                         to="/dashboard/admin"
@@ -537,7 +617,6 @@ function DashboardLayout() {
                       </Link>
                     </>
                   )}
-
                   <div className="border-t pt-2">
                     <button
                       onClick={() => { setMoreOpen(false); handleLogout(); }}
@@ -550,7 +629,6 @@ function DashboardLayout() {
                 </div>
               </PopoverContent>
             </Popover>
-            <div className="text-[10px] text-gray-600 mt-1">More</div>
           </div>
         </div>
       </div>

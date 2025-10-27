@@ -25,8 +25,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { auth } from '../../config/firebase'
 import { signOut, sendEmailVerification, type User as FirebaseUser } from 'firebase/auth'
 import { db } from '../../config/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import logo from '../../logo.svg'
+import { MeterSetupModal } from '../../components/MeterSetupModal'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardLayout,
@@ -36,6 +38,7 @@ function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const path = location.pathname
+  const queryClient = useQueryClient()
 
   interface Profile {
     name?: string
@@ -52,6 +55,7 @@ function DashboardLayout() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [sendingVerification, setSendingVerification] = useState(false)
+  const [showMeterSetup, setShowMeterSetup] = useState(false)
 
   const isAdmin = profile?.isAdmin || profile?.role === 'admin'
 
@@ -105,6 +109,45 @@ function DashboardLayout() {
 
   const isAccountDisabled = profile?.isActive === false
   const isEmailVerified = user?.emailVerified
+
+  // Check if user has meters using TanStack Query
+  const { data: hasMeters, isLoading: checkingMeters } = useQuery({
+    queryKey: ['user-meters-check', user?.uid],
+    queryFn: async () => {
+      if (!user) return false
+
+      try {
+        const electricityQuery = query(
+          collection(db, 'electricity_meters'),
+          where('userId', '==', user.uid)
+        )
+        const waterQuery = query(
+          collection(db, 'water_meters'),
+          where('userId', '==', user.uid)
+        )
+
+        const [electricitySnap, waterSnap] = await Promise.all([
+          getDocs(electricityQuery),
+          getDocs(waterQuery),
+        ])
+
+        // Return true if any meter exists
+        return !electricitySnap.empty || !waterSnap.empty
+      } catch (err) {
+        console.error('Error checking meters:', err)
+        return false
+      }
+    },
+    enabled: !!user && authChecked && !isAccountDisabled && !!isEmailVerified,
+    staleTime: 0,
+  })
+
+  // Open meter setup modal when query indicates no meters
+  useEffect(() => {
+    if (hasMeters === false && !checkingMeters) {
+      setShowMeterSetup(true)
+    }
+  }, [hasMeters, checkingMeters])
 
   // Account disabled screen
   if (authChecked && isAccountDisabled) {
@@ -164,6 +207,9 @@ function DashboardLayout() {
       </div>
     )
   }
+
+  
+
 
   async function sendVerificationEmail() {
     if (!user) return
@@ -591,6 +637,16 @@ function DashboardLayout() {
           </div>
         </div>
       </div>
+
+      {/* Meter Setup Modal */}
+      <MeterSetupModal
+        isOpen={showMeterSetup}
+        onClose={() => setShowMeterSetup(false)}
+        onSetupComplete={() => {
+          setShowMeterSetup(false)
+          queryClient.invalidateQueries()
+        }}
+      />
     </div>
   )
 }

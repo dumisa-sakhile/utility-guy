@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +33,16 @@ import { Route as DashboardWalletAutoRouteImport } from './routes/dashboard/wall
 import { Route as DashboardUtilitiesWaterRouteImport } from './routes/dashboard/utilities/water'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -141,6 +153,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/faq': typeof FaqRoute
+  '/terms': typeof TermsRoute
   '/dashboard/admin': typeof DashboardAdminRouteRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteRouteWithChildren
   '/dashboard/utilities': typeof DashboardUtilitiesRouteRouteWithChildren
@@ -162,6 +176,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
+  '/terms': typeof TermsRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset': typeof AuthResetRoute
   '/dashboard/water': typeof DashboardWaterRoute
@@ -182,6 +198,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/faq': typeof FaqRoute
+  '/terms': typeof TermsRoute
   '/dashboard/admin': typeof DashboardAdminRouteRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteRouteWithChildren
   '/dashboard/utilities': typeof DashboardUtilitiesRouteRouteWithChildren
@@ -207,6 +225,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/faq'
+    | '/terms'
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/dashboard/utilities'
@@ -228,6 +248,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/faq'
+    | '/terms'
     | '/auth/register'
     | '/auth/reset'
     | '/dashboard/water'
@@ -247,6 +269,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/faq'
+    | '/terms'
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/dashboard/utilities'
@@ -271,10 +295,26 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  FaqRoute: typeof FaqRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -527,6 +567,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  FaqRoute: FaqRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

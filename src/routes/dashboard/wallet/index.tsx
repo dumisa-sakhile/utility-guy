@@ -116,18 +116,22 @@ function WalletDashboard() {
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated')
 
-      const q = query(
-        collection(db, 'transactions'),
-        where('userId', '==', user.uid),
-        orderBy('timestamp', 'desc'),
-        orderBy('type', 'asc')
-      )
-
+      const q = query(collection(db, 'transactions'), where('userId', '==', user.uid))
       const snapshot = await getDocs(q)
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Transaction[]
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[]
+      const getTime = (ts: any) => {
+        if (!ts) return 0
+        if (typeof ts.toDate === 'function') return ts.toDate().getTime()
+        const parsed = new Date(ts)
+        return isNaN(parsed.getTime()) ? 0 : parsed.getTime()
+      }
+      // sort by timestamp desc, then type asc for stable ordering
+      items.sort((a, b) => {
+        const t = getTime(b.timestamp) - getTime(a.timestamp)
+        if (t !== 0) return t
+        return (a.type || '').localeCompare(b.type || '')
+      })
+      return items
     },
     enabled: !!user,
     retry: 1

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '../../../config/firebase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
@@ -35,12 +35,8 @@ function WalletHistory() {
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated')
       
-      const q = query(
-        collection(db, 'transactions'),
-        where('userId', '==', user.uid),
-        orderBy('timestamp', 'desc')
-      )
-      
+      const q = query(collection(db, 'transactions'), where('userId', '==', user.uid))
+
       const snapshot = await getDocs(q)
       const transactionsData = snapshot.docs.map(doc => {
         // --- FIX START: Safely extract data with default values ---
@@ -76,6 +72,14 @@ function WalletHistory() {
         } as Transaction
       })
       
+      // Sort client-side by timestamp (robust to missing/varied timestamp types)
+      const getTime = (ts: any) => {
+        if (!ts) return 0
+        if (typeof ts.toDate === 'function') return ts.toDate().getTime()
+        const parsed = new Date(ts)
+        return isNaN(parsed.getTime()) ? 0 : parsed.getTime()
+      }
+      transactionsData.sort((a, b) => getTime(b.timestamp) - getTime(a.timestamp))
       return transactionsData
     },
     enabled: !!user,

@@ -9,7 +9,8 @@ import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../../components/ui/dialog'
-import { Wallet, CreditCard, Plus, Trash2  } from 'lucide-react'
+import { Wallet, CreditCard, Plus, Trash2, Check } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export const Route = createFileRoute('/dashboard/wallet/')({
   component: WalletDashboard,
@@ -232,10 +233,11 @@ function WalletDashboard() {
       queryClient.invalidateQueries({ queryKey: ['transactions', user?.uid] })
       setAddFundsOpen(false)
       setAmount('')
+      toast.success('Funds added to wallet')
     },
     onError: (error) => {
       console.error('Failed to add funds:', error)
-      alert('Failed to add funds. Please try again.')
+      toast.error(error?.message || 'Failed to add funds. Please try again.')
     }
   })
 
@@ -281,10 +283,11 @@ function WalletDashboard() {
       queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
       setAddCardOpen(false)
       setCardDetails({ number: '', expiry: '', cvv: '', name: '', processorToken: '' })
+      toast.success('Payment card added')
     },
     onError: (error) => {
       console.error('Failed to add card:', error)
-      alert('Failed to add card. Please try again.')
+      toast.error(error?.message || 'Failed to add card. Please try again.')
     }
   })
 
@@ -296,10 +299,11 @@ function WalletDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
+      toast.success('Payment card removed')
     },
     onError: (error) => {
       console.error('Failed to delete card:', error)
-      alert('Failed to delete card. Please try again.')
+      toast.error(error?.message || 'Failed to delete card. Please try again.')
     }
   })
 
@@ -437,6 +441,12 @@ function WalletDashboard() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                {addFundsMutation.isSuccess && (
+                  <div className="inline-flex items-center text-green-600 text-sm ml-4">
+                    <Check className="h-4 w-4 mr-1" />
+                    Added
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -634,6 +644,12 @@ function WalletDashboard() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+              {addCardMutation.isSuccess && (
+                <div className="inline-flex items-center text-green-600 text-sm mt-3">
+                  <Check className="h-4 w-4 mr-1" />
+                  Card saved
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>

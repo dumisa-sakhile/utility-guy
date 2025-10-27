@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { auth, db } from '../../../config/firebase'
 import { collection, query, where, getDocs, limit, doc, writeBatch, Timestamp, updateDoc } from 'firebase/firestore'
 import { Button } from '../../../components/ui/button'
+import toast from 'react-hot-toast'
+import { Check } from 'lucide-react'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
@@ -124,8 +126,12 @@ function ElectricityPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-wallet', user?.uid] })
       queryClient.invalidateQueries({ queryKey: ['electricity-reading', user?.uid] })
+      // transactions may be queried under different keys in various pages; invalidate common ones
       queryClient.invalidateQueries({ queryKey: ['wallet-transactions', user?.uid] })
+      queryClient.invalidateQueries({ queryKey: ['transactions', user?.uid] })
+      queryClient.invalidateQueries({ queryKey: ['transactions-history', user?.uid] })
       setAmount('')
+      toast.success('Purchase completed')
     }
   })
 
@@ -184,10 +190,28 @@ function ElectricityPage() {
                   <div className="flex justify-between text-sm mt-2"><span>Estimated units</span><span>{computed.units} kWh</span></div>
                 </div>
 
-                <div className="flex gap-3">
-                  <Button onClick={() => purchaseMutation.mutate(parsedFloatSafe(amount))} disabled={purchaseMutation.isPending || !amount || !userData}>
+                <div className="flex gap-3 items-center">
+                  <Button
+                    onClick={() => purchaseMutation.mutate(parsedFloatSafe(amount))}
+                    disabled={
+                      purchaseMutation.isPending ||
+                      !amount ||
+                      !userData ||
+                      computed.gross <= 0 ||
+                      (userData?.walletBalance || 0) < computed.gross
+                    }
+                  >
                     {purchaseMutation.isPending ? 'Processing...' : 'Purchase from Wallet'}
                   </Button>
+                  {purchaseMutation.isSuccess && (
+                    <div className="inline-flex items-center text-green-600 text-sm">
+                      <Check className="h-4 w-4 mr-1" />
+                      Success
+                    </div>
+                  )}
+                  {(userData?.walletBalance || 0) < computed.gross && (
+                    <div className="text-sm text-red-600">Insufficient wallet balance</div>
+                  )}
                   <div className="text-sm text-gray-600">Available: R {userData?.walletBalance?.toFixed(2) || '0.00'}</div>
                 </div>
               </div>
@@ -202,7 +226,7 @@ function ElectricityPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
-                <div>Current balance: {reading?.balance ?? 'N/A'} kWh</div>
+                <div className="font-medium">Current balance: <span className="text-lg">{reading?.balance ?? 'N/A'} kWh</span></div>
                 <div>Last updated: {reading?.timestamp?.toDate ? reading.timestamp.toDate().toLocaleString() : 'N/A'}</div>
 
                 <div className="pt-4">

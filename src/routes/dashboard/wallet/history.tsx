@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '../../../config/firebase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../components/ui/select'
 import { CreditCard, Download, Filter } from 'lucide-react'
 import { useState } from 'react'
 
@@ -28,6 +29,8 @@ interface Transaction {
 function WalletHistory() {
   const user = auth.currentUser
   const [filter, setFilter] = useState<'all' | 'credit' | 'service_fee' | 'purchase'>('all')
+  const [pageSize, setPageSize] = useState<number>(5)
+  const [page, setPage] = useState<number>(1)
 
   // Fetch all transactions - follows security rules
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
@@ -91,6 +94,11 @@ function WalletHistory() {
     if (filter === 'all') return true
     return transaction.type === filter
   })
+
+  // Pagination (client-side)
+  const total = filteredTransactions?.length || 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const pagedTransactions = filteredTransactions ? filteredTransactions.slice((page - 1) * pageSize, page * pageSize) : []
 
   // Calculate statistics
   const stats = {
@@ -229,16 +237,28 @@ function WalletHistory() {
               <CardTitle>All Transactions</CardTitle>
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
-                <select 
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as any)}
-                  className="border rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="all">All Types</option>
-                  <option value="credit">Credits</option>
-                  <option value="service_fee">Fees</option>
-                  <option value="purchase">Purchases</option>
-                </select>
+                <Select value={filter} onValueChange={(v) => { setFilter(v as any); setPage(1); }}>
+                  <SelectTrigger size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="credit">Credits</SelectItem>
+                    <SelectItem value="service_fee">Fees</SelectItem>
+                    <SelectItem value="purchase">Purchases</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="ml-2 text-sm text-gray-500">|</div>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                  <SelectTrigger size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 / page</SelectItem>
+                    <SelectItem value="10">10 / page</SelectItem>
+                    <SelectItem value="25">25 / page</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <CardDescription>
@@ -247,6 +267,7 @@ function WalletHistory() {
           </CardHeader>
           <CardContent>
             {filteredTransactions && filteredTransactions.length > 0 ? (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -262,7 +283,7 @@ function WalletHistory() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((transaction) => (
+                    {pagedTransactions.map((transaction) => (
                       <tr key={transaction.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4 whitespace-nowrap">
                           {formatDate(transaction.timestamp)}
@@ -309,7 +330,18 @@ function WalletHistory() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+                
+                {/* Pagination controls */}
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Showing {(total === 0) ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} of {total}</div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>Previous</Button>
+                    <div className="text-sm">Page {page} / {totalPages}</div>
+                    <Button variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Next</Button>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <CreditCard className="h-16 w-16 mx-auto mb-4 text-gray-300" />

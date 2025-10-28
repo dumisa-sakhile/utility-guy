@@ -462,6 +462,8 @@ function WalletDashboard() {
   const [pmDisplayCount, setPmDisplayCount] = useState(5)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null)
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
+  const [activeTransaction, setActiveTransaction] = useState<Transaction | null>(null)
 
 
   // Simple live validation for card entry
@@ -692,25 +694,21 @@ function WalletDashboard() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-2">Date & Time</th>
-                        <th className="text-left py-3 px-2">Description</th>
+                        <th className="text-left py-3 px-2">Date</th>
                         <th className="text-left py-3 px-2">Type</th>
+                        <th className="text-left py-3 px-2">Description</th>
                         <th className="text-right py-3 px-2">Amount</th>
-                        <th className="text-right py-3 px-2">Service Fee</th>
-                        <th className="text-right py-3 px-2">Net Amount</th>
-                        <th className="text-right py-3 px-2">Balance After</th>
-                        <th className="text-left py-3 px-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {transactions.slice(0, txDisplayCount).map((transaction) => (
-                        <tr key={transaction.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-2 whitespace-nowrap">
-                            {formatDate(transaction.timestamp)}
-                          </td>
-                          <td className="py-3 px-2">
-                            <div className="font-medium">{transaction.description}</div>
-                          </td>
+                        <tr
+                          key={transaction.id}
+                          className="border-b hover:bg-gray-50 cursor-pointer"
+                          onClick={() => { setActiveTransaction(transaction); setTransactionDialogOpen(true); }}
+                          role="button"
+                        >
+                          <td className="py-3 px-2 whitespace-nowrap">{formatDate(transaction.timestamp)}</td>
                           <td className="py-3 px-2">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               transaction.type === 'credit' ? 'bg-green-100 text-green-800' :
@@ -720,30 +718,8 @@ function WalletDashboard() {
                               {transaction.type?.replace('_', ' ') || 'Unknown'}
                             </span>
                           </td>
-                          <td className={`py-3 px-2 text-right font-medium ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
-                          </td>
-                          <td className="py-3 px-2 text-right text-gray-600">
-                            {transaction.serviceFee !== undefined ? `-${formatCurrency(transaction.serviceFee)}` : '-'}
-                          </td>
-                          <td className="py-3 px-2 text-right font-medium">
-                            {transaction.netAmount !== undefined ?
-                              (transaction.netAmount > 0 ? '+' : '') + formatCurrency(transaction.netAmount) :
-                              (transaction.amount > 0 ? '+' : '') + formatCurrency(transaction.amount)
-                            }
-                          </td>
-                          <td className="py-3 px-2 text-right text-gray-600">
-                            {transaction.balanceAfter !== undefined ? `R ${transaction.balanceAfter.toFixed(2)}` : '-'}
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {transaction.status}
-                            </span>
-                          </td>
+                          <td className="py-3 px-2 truncate">{transaction.description}</td>
+                          <td className={`py-3 px-2 text-right font-medium ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>{transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -764,6 +740,37 @@ function WalletDashboard() {
               )}
             </CardContent>
           </Card>
+
+            {/* Transaction detail modal */}
+            <Dialog open={transactionDialogOpen} onOpenChange={setTransactionDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Transaction Details</DialogTitle>
+                  <DialogDescription>
+                    {activeTransaction ? activeTransaction.description : 'Transaction information'}
+                  </DialogDescription>
+                </DialogHeader>
+                {activeTransaction ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between text-sm text-gray-600"><span>Date</span><span>{formatDate(activeTransaction.timestamp)}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Type</span><span>{activeTransaction.type}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Gross</span><span>{activeTransaction.grossAmount !== undefined ? formatCurrency(activeTransaction.grossAmount) : '-'}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Service fee</span><span>{activeTransaction.serviceFee !== undefined ? (activeTransaction.serviceFee > 0 ? `-${formatCurrency(activeTransaction.serviceFee)}` : formatCurrency(activeTransaction.serviceFee)) : '-'}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Net amount</span><span>{activeTransaction.netAmount !== undefined ? (activeTransaction.netAmount > 0 ? '+' : '') + formatCurrency(activeTransaction.netAmount) : (activeTransaction.amount > 0 ? '+' : '') + formatCurrency(activeTransaction.amount)}</span></div>
+                    <div className="flex justify-between text-sm text-gray-600"><span>Balance after</span><span>{activeTransaction.balanceAfter !== undefined ? `R ${activeTransaction.balanceAfter.toFixed(2)}` : '-'}</span></div>
+                    <div className="flex justify-between text-sm"><span>Status</span><span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      activeTransaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      activeTransaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>{activeTransaction.status}</span></div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-600">No transaction selected</div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setTransactionDialogOpen(false); setActiveTransaction(null); }}>Close</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
 
         {/* Payment Methods */}
@@ -828,9 +835,9 @@ function WalletDashboard() {
                     Add a new card to your wallet for faster payments.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4 mt-4">
                   <div>
-                    <Label htmlFor="card-number">Card Number</Label>
+                    <Label htmlFor="card-number" className='pb-3'>Card Number</Label>
                     <Input
                       id="card-number"
                       placeholder="4242 4242 4242 4242"
@@ -844,7 +851,7 @@ function WalletDashboard() {
                   </div>
                     <div className="grid grid-cols-3 gap-3 items-end">
                     <div>
-                      <Label htmlFor="exp-month">Expiry Month (MM)</Label>
+                      <Label htmlFor="exp-month" className='pb-3'>Expiry Month (MM)</Label>
                       <Input
                         id="exp-month"
                         placeholder="MM"
@@ -853,7 +860,7 @@ function WalletDashboard() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="exp-year">Expiry Year (YYYY)</Label>
+                      <Label htmlFor="exp-year" className='pb-3'>Expiry Year (YYYY)</Label>
                       <Input
                         id="exp-year"
                         placeholder="YYYY"
@@ -869,7 +876,7 @@ function WalletDashboard() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="cvv">CVV</Label>
+                      <Label htmlFor="cvv" className='pb-3'>CVV</Label>
                       <Input
                         id="cvv"
                         placeholder="123"
@@ -880,7 +887,7 @@ function WalletDashboard() {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="name">Cardholder Name</Label>
+                    <Label htmlFor="name" className='pb-3'>Cardholder Name</Label>
                     <Input
                       id="name"
                       placeholder="John Doe"

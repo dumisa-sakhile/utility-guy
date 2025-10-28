@@ -124,12 +124,18 @@ export function MeterSetupModal({ isOpen, onClose, onSetupComplete }: MeterSetup
 
       // Create a transactions record describing the initial credit
       const transactionRef = doc(collection(db, 'transactions'))
+      // Match the shape used by the top-up flow so UI and analytics see consistent fields
       batch.set(transactionRef, {
         userId: user.uid,
         type: 'credit',
         amount: 250,
+        grossAmount: 250,
+        netAmount: 250,
+        serviceFee: 0,
         description: 'Initial wallet credit (setup)',
+        status: 'completed',
         timestamp: Timestamp.now(),
+        balanceAfter: 250,
         meta: { source: 'meter_setup' }
       })
 

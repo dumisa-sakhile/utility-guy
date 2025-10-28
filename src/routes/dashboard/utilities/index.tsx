@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { auth, db } from '../../../config/firebase'
@@ -21,7 +21,10 @@ function ElectricityPage() {
   const user = auth.currentUser
   const queryClient = useQueryClient()
   const [amount, setAmount] = useState('')
-  const [limitValue, setLimitValue] = useState('')
+  // Config UI state
+  const [showConfig, setShowConfig] = useState(false)
+  const [cfgLimitValue, setCfgLimitValue] = useState('')
+  const [cfgAutoPause, setCfgAutoPause] = useState(false)
 
   // Fetch user wallet
   const { data: userData } = useQuery<any>({
@@ -144,7 +147,14 @@ function ElectricityPage() {
         updatedAt: Timestamp.now()
       })
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['electricity-meter', user?.uid] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['electricity-meter', user?.uid] })
+      toast.success('Usage limit saved')
+      setShowConfig(false)
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to save limit')
+    }
   })
 
   const togglePauseMutation = useMutation({
@@ -158,6 +168,18 @@ function ElectricityPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['electricity-meter', user?.uid] })
   })
 
+  // Auto-pause when limit reached
+  useEffect(() => {
+    if (!meter || !reading) return
+    const limit = meter.usageLimit
+    if (limit == null) return
+    const current = Number(reading.balance || 0)
+    if (current >= limit && !meter.isPaused) {
+      togglePauseMutation.mutate(true)
+      toast.success('Meter paused — usage limit reached')
+    }
+  }, [meter, reading])
+
   const computed = (() => {
     const a = parseFloat(amount || '0')
     const serviceFee = parseFloat((a * COMMISSION_RATE).toFixed(2))
@@ -166,15 +188,33 @@ function ElectricityPage() {
     return { gross: a, serviceFee, net, units }
   })()
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Electricity Management</h1>
+  const MAX_LIMIT = 1000000
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <Card>
+  const handleSaveConfig = () => {
+    const v = parseFloat(cfgLimitValue || '')
+    if (!reading) return toast.error('No meter reading available')
+    const current = Number(reading.balance || 0)
+    if (isNaN(v) || v <= 0) return toast.error('Enter a valid limit')
+    if (v < current) return toast.error('Limit cannot be less than current meter balance')
+    if (v > MAX_LIMIT) return toast.error(`Limit cannot exceed ${MAX_LIMIT}`)
+    setLimitMutation.mutate(v)
+  }
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Electricity Management</h1>
+            <p className="text-gray-600 mt-1">Buy units and manage your meter limits</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Purchase card */}
+          <Card className="h-full">
             <CardHeader>
-              <CardTitle>Buy Electricity Units</CardTitle>
+              <CardTitle>Buy Electricity</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -183,14 +223,22 @@ function ElectricityPage() {
                   <Input id="amount" type="number" placeholder="100.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded">
-                  <div className="flex justify-between text-sm"><span>Gross</span><span>R {computed.gross.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-sm"><span>Service fee ({COMMISSION_RATE * 100}%)</span><span>-R {computed.serviceFee.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-semibold border-t pt-2"><span>Net for units</span><span>R {computed.net.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-sm mt-2"><span>Estimated units</span><span>{computed.units} kWh</span></div>
+                <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded">
+                  <div>
+                    <div className="text-sm text-gray-600">Gross</div>
+                    <div className="font-semibold">R {computed.gross.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500 mt-1">Service fee ({COMMISSION_RATE * 100}%)</div>
+                    <div className="text-sm">-R {computed.serviceFee.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Net (for units)</div>
+                    <div className="font-semibold">R {computed.net.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500 mt-1">Estimated units</div>
+                    <div className="text-sm">{computed.units} kWh</div>
+                  </div>
                 </div>
 
-                <div className="flex gap-3 items-center">
+                <div className="flex items-center gap-4">
                   <Button
                     onClick={() => purchaseMutation.mutate(parsedFloatSafe(amount))}
                     disabled={
@@ -203,53 +251,107 @@ function ElectricityPage() {
                   >
                     {purchaseMutation.isPending ? 'Processing...' : 'Purchase from Wallet'}
                   </Button>
+
                   {purchaseMutation.isSuccess && (
                     <div className="inline-flex items-center text-green-600 text-sm">
                       <Check className="h-4 w-4 mr-1" />
                       Success
                     </div>
                   )}
+
                   {(userData?.walletBalance || 0) < computed.gross && (
                     <div className="text-sm text-red-600">Insufficient wallet balance</div>
                   )}
-                  <div className="text-sm text-gray-600">Available: R {userData?.walletBalance?.toFixed(2) || '0.00'}</div>
+
+                  <div className="ml-auto text-sm text-gray-600">Available: R {userData?.walletBalance?.toFixed(2) || '0.00'}</div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Meter Info</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="font-medium">Current balance: <span className="text-lg">{reading?.balance ?? 'N/A'} kWh</span></div>
-                <div>Last updated: {reading?.timestamp?.toDate ? reading.timestamp.toDate().toLocaleString() : 'N/A'}</div>
+          <div className="space-y-6">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Meter Info</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="font-medium">Current balance</div>
+                  <div className="text-2xl">{reading?.balance ?? 'N/A'} kWh</div>
+                  <div className="text-xs text-gray-500">Last updated: {reading?.timestamp?.toDate ? reading.timestamp.toDate().toLocaleString() : 'N/A'}</div>
 
-                <div className="pt-4">
-                  <Label htmlFor="usage-limit">Usage Limit (kWh)</Label>
-                  <Input id="usage-limit" type="number" placeholder="e.g. 500" value={limitValue} onChange={(e) => setLimitValue(e.target.value)} />
-                  <div className="flex gap-2 mt-2">
-                    <Button onClick={() => setLimitMutation.mutate(parsedFloatSafe(limitValue))} disabled={setLimitMutation.isPending || !meter}>
-                      {setLimitMutation.isPending ? 'Saving...' : 'Set Limit'}
-                    </Button>
-                    <Button variant="outline" onClick={() => togglePauseMutation.mutate(!(meter?.isPaused))} disabled={togglePauseMutation.isPending || !meter}>
-                      {meter?.isPaused ? 'Resume Meter' : 'Pause Meter'}
-                    </Button>
+                  <div className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">Usage Limit</div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowConfig(true)}>Configure</Button>
+                        <Button variant="ghost" size="sm" onClick={() => togglePauseMutation.mutate(!(meter?.isPaused))} disabled={togglePauseMutation.isPending || !meter}>
+                          {meter?.isPaused ? 'Resume' : 'Pause'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-700 mt-2">{meter?.usageLimit != null ? `${meter.usageLimit} kWh` : 'Not set'}</div>
+                    {meter?.isPaused != null && (
+                      <div className="text-xs text-gray-500">Meter: {meter.isPaused ? 'Paused' : 'Active'}</div>
+                    )}
+
+                    {showConfig && (
+                      <div className="mt-3 space-y-2">
+                        <Input id="usage-limit" type="number" placeholder="e.g. 500" value={cfgLimitValue} onChange={(e) => setCfgLimitValue(e.target.value)} />
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input id="autoPause" type="checkbox" checked={cfgAutoPause} onChange={(e) => setCfgAutoPause(e.target.checked)} />
+                            Auto-pause when reached
+                          </label>
+                          <div className="ml-auto flex gap-2">
+                            <Button onClick={handleSaveConfig} disabled={setLimitMutation.isPending}>Save</Button>
+                            <Button variant="outline" onClick={() => setShowConfig(false)}>Cancel</Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Progress */}
+                    {meter?.usageLimit != null && reading && (
+                      <div className="mt-4 space-y-2">
+                        <div className="text-xs text-gray-500">Progress to limit</div>
+                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                          <div className="bg-blue-500 h-3" style={{ width: `${Math.min(100, (Number(reading.balance || 0) / meter.usageLimit) * 100)}%` }} />
+                        </div>
+                        <div className="text-xs text-gray-500">Needed vs Available</div>
+                        {(() => {
+                          const need = Math.max(0, (meter.usageLimit || 0) - (reading.balance || 0))
+                          const cost = need * PRICE_PER_KWH
+                          const have = (userData?.walletBalance || 0)
+                          const pct = cost <= 0 ? 100 : Math.min(100, (have / cost) * 100)
+                          return (
+                            <div>
+                              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                <div className={`h-3 ${have >= cost ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <div className="text-xs text-gray-500">Needed: R {cost.toFixed(2)} — Available: R {have.toFixed(2)}</div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
                   </div>
-                  {meter?.usageLimit != null && (
-                    <div className="text-xs text-gray-500 mt-2">Current limit: {meter.usageLimit} kWh</div>
-                  )}
-                  {meter?.isPaused != null && (
-                    <div className="text-xs text-gray-500 mt-1">Meter is currently: {meter.isPaused ? 'Paused' : 'Active'}</div>
-                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3">
+                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['electricity-reading', user?.uid] })} variant="outline">Refresh Reading</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

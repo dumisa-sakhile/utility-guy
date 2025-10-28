@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { collection, query, where, orderBy, getDocs, doc, addDoc, deleteDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, doc, addDoc, deleteDoc, writeBatch, serverTimestamp, limit } from 'firebase/firestore'
 import { auth, db } from '../../../config/firebase'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
@@ -10,6 +10,7 @@ import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../../components/ui/dialog'
 import { Wallet, CreditCard, Plus, Trash2, Check } from 'lucide-react'
+import { isCardNumberPlausible, isCvvValid, validateExpiry } from '../../../lib/cardUtils'
 import toast from 'react-hot-toast'
 
 export const Route = createFileRoute('/dashboard/wallet/')({
@@ -28,7 +29,7 @@ interface User {
 interface Transaction {
   id: string
   userId: string
-  type: 'credit' | 'purchase' | 'topup' | 'service_fee'
+  type: 'credit' | 'purchase' | 'topup' | 'service_fee' | 'withdraw'
   amount: number
   description: string
   status: 'completed' | 'pending' | 'failed'
@@ -56,15 +57,18 @@ function WalletDashboard() {
   const user = auth.currentUser
   const queryClient = useQueryClient()
   const [addFundsOpen, setAddFundsOpen] = useState(false)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [addCardOpen, setAddCardOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [cardDetails, setCardDetails] = useState({
     number: '',
-    expiry: '',
+    expMonth: '',
+    expYear: '',
     cvv: '',
     name: '',
     processorToken: ''
   })
+  const [withdrawAmount, setWithdrawAmount] = useState('')
 
   const COMMISSION_RATE = 0.05
 
@@ -111,7 +115,7 @@ function WalletDashboard() {
     retry: 1
   })
 
-  // Fetch transactions - follows security rules (only user's own transactions)
+  // Fetch transactions - use same approach as history.tsx for speed and consistency
   const { data: transactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ['transactions', user?.uid],
     queryFn: async () => {
@@ -119,19 +123,45 @@ function WalletDashboard() {
 
       const q = query(collection(db, 'transactions'), where('userId', '==', user.uid))
       const snapshot = await getDocs(q)
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[]
+
+      const items = snapshot.docs.map(doc => {
+        const data = doc.data()
+        const {
+          userId,
+          type,
+          amount = 0,
+          description,
+          status,
+          timestamp,
+          serviceFee,
+          netAmount,
+          grossAmount,
+          balanceAfter
+        } = data
+
+        return {
+          id: doc.id,
+          userId,
+          type: type as Transaction['type'],
+          amount,
+          description,
+          status: status as Transaction['status'],
+          timestamp,
+          serviceFee: serviceFee as number | undefined,
+          netAmount: netAmount as number | undefined,
+          grossAmount: grossAmount as number | undefined,
+          balanceAfter: balanceAfter as number | undefined
+        } as Transaction
+      })
+
       const getTime = (ts: any) => {
         if (!ts) return 0
         if (typeof ts.toDate === 'function') return ts.toDate().getTime()
         const parsed = new Date(ts)
         return isNaN(parsed.getTime()) ? 0 : parsed.getTime()
       }
-      // sort by timestamp desc, then type asc for stable ordering
-      items.sort((a, b) => {
-        const t = getTime(b.timestamp) - getTime(a.timestamp)
-        if (t !== 0) return t
-        return (a.type || '').localeCompare(b.type || '')
-      })
+
+      items.sort((a, b) => getTime(b.timestamp) - getTime(a.timestamp))
       return items
     },
     enabled: !!user,
@@ -147,7 +177,8 @@ function WalletDashboard() {
       const q = query(
         collection(db, 'payment_cards'),
         where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
+        limit(10)
       )
 
       const snapshot = await getDocs(q)
@@ -179,7 +210,7 @@ function WalletDashboard() {
       const serviceFee = topupAmount * COMMISSION_RATE
       const netAmount = topupAmount - serviceFee
       const currentBalance = userData?.walletBalance || 0
-      const newBalance = currentBalance + netAmount
+      const newBalance = parseFloat((currentBalance + netAmount).toFixed(2))
 
       const batch = writeBatch(db)
 
@@ -200,7 +231,7 @@ function WalletDashboard() {
         grossAmount: topupAmount,
         netAmount: netAmount,
         serviceFee: serviceFee,
-        description: `Wallet top-up - R${topupAmount.toFixed(2)}`,
+        description: !userData ? 'Initial wallet credit (setup)' : `Wallet top-up - R${topupAmount.toFixed(2)}`,
         status: 'completed' as const,
         timestamp: serverTimestamp(),
         balanceAfter: newBalance
@@ -249,10 +280,9 @@ function WalletDashboard() {
       const last4 = cardData.number.slice(-4)
       const brand = getCardBrand(cardData.number)
 
-      // Parse expiry date
-      const [mm, yy] = cardData.expiry.split('/').map(s => s.trim())
-      let expMonth = parseInt(mm) || 0
-      let expYear = parseInt(yy) || 0
+      // Parse expiry date from separate fields
+      let expMonth = parseInt(cardData.expMonth as any) || 0
+      let expYear = parseInt(cardData.expYear as any) || 0
       if (expYear < 100) {
         expYear += 2000
       }
@@ -264,7 +294,7 @@ function WalletDashboard() {
       ))
       const isDefault = existingCards.empty
 
-      const cardDoc = {
+      const cardDoc: any = {
         userId: user.uid,
         brand,
         last4,
@@ -273,17 +303,28 @@ function WalletDashboard() {
         cardholderName: cardData.name,
         isDefault,
         createdAt: serverTimestamp(),
-        processorToken: cardData.processorToken || null,
       }
+      if ((cardData as any).processorToken) cardDoc.processorToken = (cardData as any).processorToken
 
-      await addDoc(collection(db, 'payment_cards'), cardDoc)
-      return cardDoc
+      const ref = await addDoc(collection(db, 'payment_cards'), cardDoc)
+      return { id: ref.id, ...cardDoc }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
-      setAddCardOpen(false)
-      setCardDetails({ number: '', expiry: '', cvv: '', name: '', processorToken: '' })
-      toast.success('Payment card added')
+    onSuccess: (data) => {
+      // Add the saved card into cache so it shows immediately
+      try {
+        if (data) {
+          queryClient.setQueryData(['payment-cards', user?.uid], (old: any[] | undefined) => {
+            if (!old) return [data]
+            return [data, ...old]
+          })
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
+        }
+      } finally {
+        setAddCardOpen(false)
+        setCardDetails({ number: '', expMonth: '', expYear: '', cvv: '', name: '', processorToken: '' })
+        toast.success('Payment card added')
+      }
     },
     onError: (error) => {
       console.error('Failed to add card:', error)
@@ -297,13 +338,81 @@ function WalletDashboard() {
       if (!user) throw new Error('Not authenticated')
       await deleteDoc(doc(db, 'payment_cards', cardId))
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
+    onSuccess: (_data, cardId) => {
+      // remove from cache immediately
+      queryClient.setQueryData(['payment-cards', user?.uid], (old: any[] | undefined) => {
+        if (!old) return []
+        return old.filter(c => c.id !== cardId)
+      })
       toast.success('Payment card removed')
     },
     onError: (error) => {
       console.error('Failed to delete card:', error)
       toast.error(error?.message || 'Failed to delete card. Please try again.')
+    }
+  })
+
+  // Withdraw mutation — debits user's wallet
+  const withdrawMutation = useMutation({
+    mutationFn: async (withdrawAmt: number) => {
+      if (!user) throw new Error('Not authenticated')
+      const currentBalance = userData?.walletBalance || 0
+      if (withdrawAmt <= 0) throw new Error('Enter a valid amount')
+      if (withdrawAmt > currentBalance) throw new Error('Insufficient wallet balance')
+      const serviceFee = parseFloat((withdrawAmt * COMMISSION_RATE).toFixed(2))
+      const gross = parseFloat(withdrawAmt.toFixed(2))
+      const net = parseFloat((gross - serviceFee).toFixed(2))
+
+      const newBalance = parseFloat((currentBalance - gross).toFixed(2))
+      const batch = writeBatch(db)
+
+      // update wallet
+      batch.update(doc(db, 'users', user.uid), { walletBalance: newBalance, updatedAt: serverTimestamp() })
+
+      // withdraw transaction (gross amount debited)
+      const withdrawTx = {
+        userId: user.uid,
+        type: 'withdraw' as const,
+        amount: -gross,
+        description: `Withdrawal - R${gross.toFixed(2)}`,
+        status: 'completed' as const,
+        timestamp: serverTimestamp(),
+        balanceAfter: newBalance,
+        grossAmount: gross,
+        netAmount: net,
+      }
+      const wRef = doc(collection(db, 'transactions'))
+      batch.set(wRef, withdrawTx)
+
+      // service fee transaction
+      if (serviceFee > 0) {
+        const feeTx = {
+          userId: user.uid,
+          type: 'service_fee' as const,
+          amount: -serviceFee,
+          description: `Service fee (${COMMISSION_RATE * 100}%) - Withdrawal`,
+          status: 'completed' as const,
+          timestamp: serverTimestamp(),
+          balanceAfter: newBalance,
+          serviceFee: serviceFee,
+          grossAmount: gross
+        }
+        const fRef = doc(collection(db, 'transactions'))
+        batch.set(fRef, feeTx)
+      }
+
+      await batch.commit()
+      return newBalance
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user?.uid] })
+      queryClient.invalidateQueries({ queryKey: ['transactions', user?.uid] })
+      setWithdrawOpen(false)
+      setWithdrawAmount('')
+      toast.success('Withdrawal completed')
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Failed to withdraw')
     }
   })
 
@@ -322,8 +431,48 @@ function WalletDashboard() {
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Unknown'
-    return timestamp.toDate?.().toLocaleDateString('en-ZA') || 'Invalid date'
+    const date = timestamp.toDate?.()
+    if (!date) return 'Invalid date'
+    return date.toLocaleString('en-ZA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
+
+  const formatCurrency = (amount: number) => {
+    return `R ${Math.abs(amount).toFixed(2)}`
+  }
+
+  // rendering of type badges uses inline classes now (keeps code simple and consistent with history.tsx)
+
+  // Metrics aggregation
+  const totals = (transactions || []).reduce((acc, t) => {
+    if (t.type === 'credit') acc.credits += Math.abs(t.amount || 0)
+    if (t.type === 'purchase' || t.type === 'topup') acc.purchases += Math.abs(t.amount || 0)
+    if (t.type === 'service_fee') acc.fees += Math.abs(t.amount || 0)
+    if (t.type === 'withdraw') acc.withdrawals += Math.abs(t.amount || 0)
+    return acc
+  }, { credits: 0, purchases: 0, fees: 0, withdrawals: 0 })
+
+  // Pagination / show more state
+  const [txDisplayCount, setTxDisplayCount] = useState(5)
+  const [pmDisplayCount, setPmDisplayCount] = useState(5)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null)
+
+
+  // Simple live validation for card entry
+  const cardIsValid = (() => {
+    const num = (cardDetails.number || '')
+    const cvv = (cardDetails.cvv || '')
+    const mm = (cardDetails.expMonth || '')
+    const yyyy = (cardDetails.expYear || '')
+    const name = (cardDetails.name || '').trim()
+    return isCardNumberPlausible(num) && isCvvValid(cvv) && validateExpiry(mm, yyyy) && name.length > 0
+  })()
 
   // Loading state
   const isLoading = userLoading || transactionsLoading || paymentMethodsLoading
@@ -365,6 +514,34 @@ function WalletDashboard() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Metrics Row (spans left columns) */}
+        <div className="lg:col-span-2 grid grid-cols-4 gap-4">
+          <Card>
+            <CardContent>
+              <div className="text-sm text-gray-500">Deposits</div>
+              <div className="text-lg font-semibold text-green-700">R {totals.credits.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <div className="text-sm text-gray-500">Purchases</div>
+              <div className="text-lg font-semibold text-blue-700">R {totals.purchases.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <div className="text-sm text-gray-500">Fees</div>
+              <div className="text-lg font-semibold text-red-600">R {totals.fees.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <div className="text-sm text-gray-500">Withdrawals</div>
+              <div className="text-lg font-semibold text-red-700">R {totals.withdrawals.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Balance & Recent Transactions */}
         <div className="lg:col-span-2 space-y-6">
           {/* Balance Card */}
@@ -380,67 +557,119 @@ function WalletDashboard() {
                     Last updated: {userData?.updatedAt ? formatDate(userData.updatedAt) : 'Never'}
                   </div>
                 </div>
-                <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Funds
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Funds to Wallet</DialogTitle>
-                      <DialogDescription>
-                        Add money to your wallet. A {COMMISSION_RATE * 100}% service fee applies.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="amount">Amount (R)</Label>
-                        <Input
-                          id="amount"
-                          type="number"
-                          placeholder="100.00"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          min="1"
-                          step="0.01"
-                        />
-                      </div>
-                      {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
-                        <div className="p-3 bg-gray-50 rounded-lg space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Amount:</span>
-                            <span>R {parseFloat(amount).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-red-600">
-                            <span>Service fee ({COMMISSION_RATE * 100}%):</span>
-                            <span>-R {(parseFloat(amount) * COMMISSION_RATE).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between font-semibold border-t pt-2">
-                            <span>Net amount added:</span>
-                            <span>R {(parseFloat(amount) * (1 - COMMISSION_RATE)).toFixed(2)}</span>
-                          </div>
+                <div className="flex items-center gap-3">
+                  <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Funds
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Funds to Wallet</DialogTitle>
+                        <DialogDescription>
+                          Add money to your wallet. A {COMMISSION_RATE * 100}% service fee applies.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="amount">Amount (R)</Label>
+                          <Input
+                            id="amount"
+                            type="number"
+                            placeholder="100.00"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            min="1"
+                            step="0.01"
+                          />
                         </div>
-                      )}
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setAddFundsOpen(false)}
-                        disabled={addFundsMutation.isPending}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => addFundsMutation.mutate(parseFloat(amount))}
-                        disabled={!amount || parseFloat(amount) <= 0 || addFundsMutation.isPending}
-                      >
-                        {addFundsMutation.isPending ? 'Processing...' : 'Add Funds'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                        {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
+                          <div className="p-3 bg-gray-50 rounded-lg space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Amount:</span>
+                              <span>R {parseFloat(amount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-red-600">
+                              <span>Service fee ({COMMISSION_RATE * 100}%):</span>
+                              <span>-R {(parseFloat(amount) * COMMISSION_RATE).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold border-t pt-2">
+                              <span>Net amount added:</span>
+                              <span>R {(parseFloat(amount) * (1 - COMMISSION_RATE)).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => setAddFundsOpen(false)}
+                          disabled={addFundsMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => addFundsMutation.mutate(parseFloat(amount))}
+                          disabled={!amount || parseFloat(amount) <= 0 || addFundsMutation.isPending}
+                        >
+                          {addFundsMutation.isPending ? 'Processing...' : 'Add Funds'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="destructive">Withdraw</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Withdraw from Wallet</DialogTitle>
+                        <DialogDescription>
+                          Withdraw funds from your wallet. Amount will be debited immediately.
+                        </DialogDescription>
+                      </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="withdraw-amount">Amount (R)</Label>
+                              <Input
+                                id="withdraw-amount"
+                                type="number"
+                                placeholder="50.00"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                min="1"
+                                step="0.01"
+                              />
+                              <div className="text-xs text-gray-500 mt-2">Available: R {userData?.walletBalance?.toFixed(2) || '0.00'}</div>
+                            </div>
+
+                            {withdrawAmount && !isNaN(parseFloat(withdrawAmount)) && parseFloat(withdrawAmount) > 0 && (
+                              (() => {
+                                const gross = parseFloat(withdrawAmount)
+                                const fee = parseFloat((gross * COMMISSION_RATE).toFixed(2))
+                                const net = parseFloat((gross - fee).toFixed(2))
+                                return (
+                                  <div className="p-3 bg-gray-50 rounded-lg space-y-2 text-sm">
+                                    <div className="flex justify-between"><span>Gross</span><span>R {gross.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-red-600"><span>Service fee ({COMMISSION_RATE * 100}%)</span><span>-R {fee.toFixed(2)}</span></div>
+                                    <div className="flex justify-between font-semibold border-t pt-2"><span>Net to receive</span><span>R {net.toFixed(2)}</span></div>
+                                  </div>
+                                )
+                              })()
+                            )}
+                          </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setWithdrawOpen(false)} disabled={withdrawMutation.isPending}>Cancel</Button>
+                        <Button onClick={() => withdrawMutation.mutate(parseFloat(withdrawAmount))} disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > (userData?.walletBalance || 0) || withdrawMutation.isPending}>
+                          {withdrawMutation.isPending ? 'Processing...' : 'Withdraw'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 {addFundsMutation.isSuccess && (
                   <div className="inline-flex items-center text-green-600 text-sm ml-4">
                     <Check className="h-4 w-4 mr-1" />
@@ -458,30 +687,29 @@ function WalletDashboard() {
             </CardHeader>
             <CardContent>
               {transactions && transactions.length > 0 ? (
+                <>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-2">Date</th>
+                        <th className="text-left py-3 px-2">Date & Time</th>
                         <th className="text-left py-3 px-2">Description</th>
                         <th className="text-left py-3 px-2">Type</th>
                         <th className="text-right py-3 px-2">Amount</th>
+                        <th className="text-right py-3 px-2">Service Fee</th>
+                        <th className="text-right py-3 px-2">Net Amount</th>
+                        <th className="text-right py-3 px-2">Balance After</th>
                         <th className="text-left py-3 px-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {transactions.slice(0, 5).map((transaction) => (
+                      {transactions.slice(0, txDisplayCount).map((transaction) => (
                         <tr key={transaction.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-2 whitespace-nowrap">
                             {formatDate(transaction.timestamp)}
                           </td>
                           <td className="py-3 px-2">
                             <div className="font-medium">{transaction.description}</div>
-                            {transaction.serviceFee && transaction.serviceFee > 0 && (
-                              <div className="text-xs text-gray-500">
-                                Fee: R {transaction.serviceFee.toFixed(2)}
-                              </div>
-                            )}
                           </td>
                           <td className="py-3 px-2">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -489,13 +717,23 @@ function WalletDashboard() {
                               transaction.type === 'service_fee' ? 'bg-red-100 text-red-800' :
                               'bg-blue-100 text-blue-800'
                             }`}>
-                              {transaction.type}
+                              {transaction.type?.replace('_', ' ') || 'Unknown'}
                             </span>
                           </td>
-                          <td className={`py-3 px-2 text-right font-medium ${
-                            transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {transaction.amount > 0 ? '+' : ''}R {Math.abs(transaction.amount).toFixed(2)}
+                          <td className={`py-3 px-2 text-right font-medium ${transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+                          </td>
+                          <td className="py-3 px-2 text-right text-gray-600">
+                            {transaction.serviceFee !== undefined ? `-${formatCurrency(transaction.serviceFee)}` : '-'}
+                          </td>
+                          <td className="py-3 px-2 text-right font-medium">
+                            {transaction.netAmount !== undefined ?
+                              (transaction.netAmount > 0 ? '+' : '') + formatCurrency(transaction.netAmount) :
+                              (transaction.amount > 0 ? '+' : '') + formatCurrency(transaction.amount)
+                            }
+                          </td>
+                          <td className="py-3 px-2 text-right text-gray-600">
+                            {transaction.balanceAfter !== undefined ? `R ${transaction.balanceAfter.toFixed(2)}` : '-'}
                           </td>
                           <td className="py-3 px-2">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -511,6 +749,12 @@ function WalletDashboard() {
                     </tbody>
                   </table>
                 </div>
+                {transactions && transactions.length > txDisplayCount && (
+                  <div className="mt-3 text-right">
+                    <Button variant="link" onClick={() => setTxDisplayCount((c) => Math.min((transactions || []).length, c + 10))}>Show more</Button>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-400" />
@@ -529,10 +773,14 @@ function WalletDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {paymentMethods && paymentMethods.length > 0 ? (
-              paymentMethods.map((method) => (
+              paymentMethods.slice(0, pmDisplayCount).map((method) => (
                 <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <CreditCard className="h-8 w-8 text-gray-400" />
+                    {(() => {
+                      const b = (method.brand || '').toLowerCase()
+                      const bg = b.includes('visa') ? 'bg-blue-100 text-blue-700' : b.includes('master') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                      return <div className={`h-8 w-8 rounded-full flex items-center justify-center ${bg} text-xs font-semibold`}>{(method.brand || '').slice(0,3)}</div>
+                    })()}
                     <div>
                       <div className="font-medium">{method.brand} •••• {method.last4}</div>
                       <div className="text-sm text-gray-500">
@@ -545,9 +793,8 @@ function WalletDashboard() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      if (confirm('Are you sure you want to delete this card?')) {
-                        deleteCardMutation.mutate(method.id)
-                      }
+                      setDeletingCardId(method.id)
+                      setDeleteDialogOpen(true)
                     }}
                     disabled={deleteCardMutation.isPending}
                   >
@@ -559,6 +806,11 @@ function WalletDashboard() {
               <div className="text-center py-4 text-gray-500">
                 <CreditCard className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                 <div>No payment methods added</div>
+              </div>
+            )}
+            {paymentMethods && paymentMethods.length > pmDisplayCount && (
+              <div className="mt-2 text-right">
+                <Button variant="link" onClick={() => setPmDisplayCount((c) => Math.min((paymentMethods || []).length, c + 5))}>Show more</Button>
               </div>
             )}
             
@@ -586,16 +838,35 @@ function WalletDashboard() {
                       onChange={(e) => setCardDetails(prev => ({...prev, number: e.target.value.replace(/\s/g, '')}))}
                       maxLength={16}
                     />
+                    {cardDetails.number && cardDetails.number.replace(/\s/g, '').length >= 13 && (
+                      <div className="text-xs text-green-600 mt-1">Card number looks valid</div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3 items-end">
                     <div>
-                      <Label htmlFor="expiry">Expiry Date (MM/YY)</Label>
+                      <Label htmlFor="exp-month">Expiry Month (MM)</Label>
                       <Input
-                        id="expiry"
-                        placeholder="MM/YY"
-                        value={cardDetails.expiry}
-                        onChange={(e) => setCardDetails(prev => ({...prev, expiry: e.target.value}))}
+                        id="exp-month"
+                        placeholder="MM"
+                        value={cardDetails.expMonth}
+                        onChange={(e) => setCardDetails(prev => ({...prev, expMonth: e.target.value.replace(/\D/g, '').slice(0,2)}))}
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="exp-year">Expiry Year (YYYY)</Label>
+                      <Input
+                        id="exp-year"
+                        placeholder="YYYY"
+                        value={cardDetails.expYear}
+                        onChange={(e) => setCardDetails(prev => ({...prev, expYear: e.target.value.replace(/\D/g, '').slice(0,4)}))}
+                      />
+                      {/* inline validation messages */}
+                      {cardDetails.expMonth && (Number(cardDetails.expMonth) < 1 || Number(cardDetails.expMonth) > 12) && (
+                        <div className="text-xs text-red-600 mt-1">Enter a valid month (1–12)</div>
+                      )}
+                      {cardDetails.expYear && Number(cardDetails.expYear) < new Date().getFullYear() && (
+                        <div className="text-xs text-red-600 mt-1">Year must be this year or later</div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="cvv">CVV</Label>
@@ -617,15 +888,7 @@ function WalletDashboard() {
                       onChange={(e) => setCardDetails(prev => ({...prev, name: e.target.value}))}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="processor-token">Processor Token (Optional)</Label>
-                    <Input
-                      id="processor-token"
-                      placeholder="tok_xxx"
-                      value={cardDetails.processorToken}
-                      onChange={(e) => setCardDetails(prev => ({...prev, processorToken: e.target.value}))}
-                    />
-                  </div>
+                  {/* processorToken removed: we don't store raw processor tokens in the client */}
                 </div>
                 <DialogFooter>
                   <Button
@@ -637,10 +900,28 @@ function WalletDashboard() {
                   </Button>
                   <Button
                     onClick={() => addCardMutation.mutate(cardDetails)}
-                    disabled={!cardDetails.number || cardDetails.number.length < 16 || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name || addCardMutation.isPending}
+                    disabled={!cardIsValid || addCardMutation.isPending}
                   >
                     {addCardMutation.isPending ? 'Adding...' : 'Add Card'}
                   </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {/* Delete confirmation dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Remove payment method</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to remove this payment method?
+                    {deletingCardId && paymentMethods && (
+                      <div className="mt-2 text-sm text-gray-600">This will remove card ending in {paymentMethods.find(m => m.id === deletingCardId)?.last4}</div>
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeletingCardId(null); }} disabled={deleteCardMutation.isPending}>Cancel</Button>
+                  <Button variant="destructive" onClick={() => { if (deletingCardId) { deleteCardMutation.mutate(deletingCardId); setDeleteDialogOpen(false); setDeletingCardId(null); } }} disabled={!deletingCardId || deleteCardMutation.isPending}>Remove</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

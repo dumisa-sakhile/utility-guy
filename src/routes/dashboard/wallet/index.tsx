@@ -317,6 +317,8 @@ function WalletDashboard() {
             if (!old) return [data]
             return [data, ...old]
           })
+          // ensure authoritative refetch so server-side fields (createdAt) are accurate
+          queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
         } else {
           queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
         }
@@ -344,6 +346,8 @@ function WalletDashboard() {
         if (!old) return []
         return old.filter(c => c.id !== cardId)
       })
+      // ensure server state and any derived queries refresh
+      queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
       toast.success('Payment card removed')
     },
     onError: (error) => {

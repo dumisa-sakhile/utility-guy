@@ -27,6 +27,7 @@
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
     "@types/recharts": "^1.8.29",
+    "@vercel/analytics": "^1.5.0",
     "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

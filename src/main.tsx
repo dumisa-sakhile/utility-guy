@@ -7,7 +7,10 @@ import { Toaster } from 'react-hot-toast'
 import { routeTree } from './routeTree.gen'
 import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
+import { inject } from "@vercel/analytics"
 
+// Initialize Vercel Analytics
+inject()
 // Create a React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +37,9 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// Vercel Analytics initialization removed (not used in this project build)
+
+
 // Render the app
 const rootElement = document.getElementById('app')
 if (rootElement && !rootElement.innerHTML) {
@@ -42,7 +48,7 @@ if (rootElement && !rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-        <Toaster position="bottom-right" />
+        <Toaster position="top-center" />
        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </StrictMode>,

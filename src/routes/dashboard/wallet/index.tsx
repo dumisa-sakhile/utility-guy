@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { collection, query, where, orderBy, getDocs, doc, addDoc, deleteDoc, writeBatch, serverTimestamp, limit } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, doc, addDoc, deleteDoc, writeBatch, serverTimestamp, limit, getDoc } from 'firebase/firestore'
 import { auth, db } from '../../../config/firebase'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
@@ -307,22 +307,29 @@ function WalletDashboard() {
       if ((cardData as any).processorToken) cardDoc.processorToken = (cardData as any).processorToken
 
       const ref = await addDoc(collection(db, 'payment_cards'), cardDoc)
-      return { id: ref.id, ...cardDoc }
+
+      // Read back the server-confirmed document so we return the actual stored shape (createdAt resolved)
+      try {
+        const saved = await getDoc(ref)
+        const savedData = saved.data() || {}
+        return { id: ref.id, ...savedData }
+      } catch (err) {
+        // Some security rules may prevent reading immediately; fall back to optimistic shape
+        return { id: ref.id, ...cardDoc, createdAt: new Date() }
+      }
     },
     onSuccess: (data) => {
-      // Add the saved card into cache so it shows immediately
       try {
         if (data) {
+          // Insert the server-confirmed card into cache so it appears immediately and correctly sorted
           queryClient.setQueryData(['payment-cards', user?.uid], (old: any[] | undefined) => {
             if (!old) return [data]
             return [data, ...old]
           })
-          // ensure authoritative refetch so server-side fields (createdAt) are accurate
-          queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
-        } else {
-          queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
         }
       } finally {
+        // still trigger a refetch to ensure cross-client consistency, but UI won't lose the card
+        queryClient.invalidateQueries({ queryKey: ['payment-cards', user?.uid] })
         setAddCardOpen(false)
         setCardDetails({ number: '', expMonth: '', expYear: '', cvv: '', name: '', processorToken: '' })
         toast.success('Payment card added')
@@ -480,8 +487,8 @@ function WalletDashboard() {
     return isCardNumberPlausible(num) && isCvvValid(cvv) && validateExpiry(mm, yyyy) && name.length > 0
   })()
 
-  // Loading state
-  const isLoading = userLoading || transactionsLoading || paymentMethodsLoading
+  // Loading state — don't block the whole page on payment methods; show main UI when user & transactions are ready
+  const isLoading = userLoading || transactionsLoading
 
   if (isLoading) {
     return (
@@ -783,7 +790,11 @@ function WalletDashboard() {
             <CardTitle className="text-lg">Payment Methods</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {paymentMethods && paymentMethods.length > 0 ? (
+            {paymentMethodsLoading ? (
+              <div className="text-center py-6">
+                <div className="text-gray-600">Loading payment methods...</div>
+              </div>
+            ) : paymentMethods && paymentMethods.length > 0 ? (
               paymentMethods.slice(0, pmDisplayCount).map((method) => (
                 <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
